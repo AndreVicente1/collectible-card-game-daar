@@ -42,7 +42,7 @@ contract Collection is ERC721URIStorage, Ownable {
 
         // Create the token URI (metadata) for the NFT
         string memory tokenURI = string(abi.encodePacked(
-            '{"collectionName": "Card #', uint2str(_cardNumber), '", "image": "', _imgURI, '"}'
+            '{"name": "Card #', uint2str(_cardNumber), '", "image": "', _imgURI, '"}'
         ));
         _setTokenURI(tokenId, tokenURI);
     }

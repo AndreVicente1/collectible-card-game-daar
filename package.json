@@ -10,6 +10,11 @@
     "dev": "concurrently -c \"blue.bold,red.bold\" --names \"ethereum,frontend\" \"yarn --cwd contracts dev\" \"yarn --cwd frontend dev\""
   },
   "devDependencies": {
-    "concurrently": "^7.5.0"
+    "@typechain/ethers-v5": "^11.1.2",
+    "concurrently": "^9.0.1",
+    "typechain": "^8.3.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
   }
 }
