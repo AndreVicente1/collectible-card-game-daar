@@ -16,7 +16,10 @@ contract Main is Ownable {
     event CollectionCreated(string name, int cardCount, address collectionAddress);
     event CardMinted(uint256 collectionId, address to, uint256 cardNumber);
 
-    constructor() Ownable(msg.sender) {}
+    constructor(address _owner) Ownable(msg.sender) {
+        require(_owner != address(0), "Owner address cannot be zero");
+        transferOwnership(_owner);
+    }
     
     // Create a new collection with a name and card count
     function createCollection(string memory _name, int _cardCount) external onlyOwner {

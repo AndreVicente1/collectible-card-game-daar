@@ -7,6 +7,7 @@ import collectionAbi from '@/abis/Collection.json';
 import mainAbi from '@/abis/Main.json';
 
 type Canceler = () => void
+console.log('test');
 const useAffect = (
   asyncEffect: () => Promise<Canceler | void>,
   dependencies: any[] = []
@@ -26,6 +27,7 @@ const useAffect = (
 }
 
 const useWallet = () => {
+  console.log('test');
   const [details, setDetails] = useState<ethereum.Details>()
   const [contract, setContract] = useState<ethers.Contract>()
   useAffect(async () => {
@@ -43,9 +45,9 @@ const useWallet = () => {
 }
 
 export const App = () => {
+  console.log('test');
   const wallet = useWallet();
   const [nfts, setNfts] = useState<any[]>([]);
-
   // owner du contrat
   const [isOwner, setIsOwner] = useState(false);
 
@@ -55,56 +57,25 @@ export const App = () => {
   // maj des collections
   const [collections, setCollections] = useState<any[]>([]);
 
-  // transfert ownership
-  const [newOwnerAddress, setNewOwnerAddress] = useState('');
-
   useEffect(() => {
     if (!wallet) return;
-  
-    // Function to transfer ownership
-    const transferOwnership = async (newOwnerAddress: string) => {
-      if (!wallet) return;
-      const { contract } = wallet;
-      try {
-        const tx = await contract.transferOwnership(newOwnerAddress);
-        await tx.wait();
-        alert('Ownership transferred successfully to ' + newOwnerAddress);
-        // Update the isOwner state if necessary
-        setIsOwner(false);
-      } catch (error) {
-        console.error('Error transferring ownership:', error);
-      }
-    };
-
-    //transferOwnership('0x47ea33189c7dedc36ea5a0da5a5a0646d5f7e7b7');
 
     const fetchNFTs = async () => {
       const { details, contract } = wallet;
       const { account, signer } = details;
 
-      /*const checkAdmin = async () => {
-        const { details, contract } = wallet;
-        const adminRole = await contract.hasRole(
-          ethers.utils.keccak256(ethers.utils.toUtf8Bytes('ADMIN_ROLE')),
-          details.account
-        );
-      
-        setIsAdmin(adminRole);
-      };*/
-
       const checkOwner = async () => {
         const { details, contract } = wallet;
         const ownerAddress = await contract.owner();
-
+    
         console.log('Owner address of Main contract:', ownerAddress);
         console.log('Connected account:', details.account);
-
+    
         if (details.account) {
-          setIsOwner(details.account.toLowerCase() === ownerAddress.toLowerCase());
+            setIsOwner(details.account.toLowerCase() === ownerAddress.toLowerCase());
         }
-
-        //await checkAdmin();
-      };
+    };
+    
 
       checkOwner().catch(console.error);
 
@@ -145,20 +116,6 @@ export const App = () => {
     };
 
     fetchNFTs().catch(console.error);
-
-    const grantAdminRole = async (account: any) => {
-      if (!wallet) return;
-      const { contract } = wallet;
-      try {
-        const tx = await contract.grantAdminRole(account);
-        await tx.wait();
-        alert('Admin role granted successfully');
-      } catch (error) {
-        console.error('Error granting admin role:', error);
-      }
-    };
-
-    grantAdminRole('0x47ea33189c7dedc36ea5a0da5a5a0646d5f7e7b7');
     
     const fetchCollections = async () => {
       const { contract } = wallet;
@@ -250,7 +207,7 @@ export const App = () => {
         
       )}
       
-      {wallet && (
+      {wallet && isOwner && (
         <>
           <div>
 
@@ -270,6 +227,7 @@ export const App = () => {
               <h2>Mint a New Card</h2>
               <input
                 type="number"
+                name= "Collection ID"
                 placeholder="Collection ID"
                 value={collectionId}
                 onChange={(e) => setCollectionId(Number(e.target.value))} />
@@ -280,6 +238,7 @@ export const App = () => {
                 onChange={(e) => setRecipientAddress(e.target.value)} />
               <input
                 type="number"
+                name = "Card Number"
                 placeholder="Card Number"
                 value={cardNumber}
                 onChange={(e) => setCardNumber(Number(e.target.value))} />

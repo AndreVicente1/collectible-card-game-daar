@@ -20,6 +20,7 @@ const config: HardhatUserConfig = {
     admin: { default: 0 },
     second: { default: 1 },
     random: { default: 8 },
+    owner: {default: 1},
   },
   abiExporter: {
     runOnCompile: true,
@@ -31,6 +32,24 @@ const config: HardhatUserConfig = {
   },
   typechain: {
     outDir: '../typechain',
+  },
+  networks: {
+    hardhat: {
+      chainId: 31337,
+      // Configure custom accounts using private keys from environment variables
+      accounts: [
+        {
+          privateKey: process.env.DEPLOYER_PRIVATE_KEY || '0xe06Dc40BFfDe7bF770C77Ee63e9E34848b47718c',
+          balance: '1000000000000000000000',
+        },
+        {
+          privateKey: process.env.DEPLOYER_PRIVATE_KEY || '0xe06Dc40BFfDe7bF770C77Ee63e9E34848b47718c',
+          balance: '1000000000000000000000',
+        },
+        // Add more accounts if needed
+      ],
+    },
+    // Add other networks (e.g., Ropsten, Mainnet) as needed
   },
 }
 
