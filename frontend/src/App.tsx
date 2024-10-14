@@ -65,7 +65,15 @@ export const App = () => {
       console.error('Error fetching balance:', error)
     }
   }
-  
+
+  const isValidAddress = (address: string) => {
+    try {
+      return ethers.utils.isAddress(address);
+    } catch {
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (!wallet) return
 
@@ -76,6 +84,7 @@ export const App = () => {
       if (account) {
         await fetchAndLogBalance(provider, account)
       }
+      
       const checkOwner = async () => {
         try {
           const ownerAddress = await contract.owner()
@@ -97,32 +106,39 @@ export const App = () => {
         const collectionCountBN: BigNumber = await contract.getCollectionCount()
         const collectionCount = collectionCountBN.toNumber()
 
+        console.log('Number of collections:', collectionCount)
+        console.log('Fetching all NFTs...')
         const allNFTs = []
 
         for (let i = 0; i < collectionCount; i++) {
           const [collectionName, , collectionAddress] = await contract.getCollection(i)
           const collectionContract = new ethers.Contract(collectionAddress, collectionAbi, provider)
 
-          // Fetch the number of tokens the user owns in this collection
-          const balanceBN: BigNumber = await collectionContract.balanceOf(account)
-          const balance = balanceBN.toNumber()
+          // Fetch the total number of tokens minted in this collection
+          const nextTokenIdBN: BigNumber = await collectionContract.nextTokenId()
+          const nextTokenId = nextTokenIdBN.toNumber()
 
-          // Fetch token IDs and metadata
-          for (let j = 0; j < balance; j++) {
-            const tokenIdBN: BigNumber = await collectionContract.tokenOfOwnerByIndex(account, j)
-            const tokenId = tokenIdBN.toNumber()
+          // Iterate through all token IDs and check ownership
+          for (let tokenId = 0; tokenId < nextTokenId; tokenId++) {
+            try {
+                console.log(`Fetching token ID ${tokenId} in collection ${collectionName}...`)
+                const tokenURI = await collectionContract.tokenURI(tokenId)
 
-            const tokenURI = await collectionContract.tokenURI(tokenId)
-
-            // Fetch metadata from tokenURI
-            const response = await fetch(tokenURI)
-            const metadata = await response.json()
-
-            allNFTs.push({
-              collectionName,
-              tokenId,
-              metadata,
-            })
+                // Fetch metadata from tokenURI
+                const response = await fetch(tokenURI)
+                const metadata = await response.json()
+                console.log('Metadata:', metadata)
+                console.log('Image:', metadata.image)
+                allNFTs.push({
+                  collectionName,
+                  tokenId,
+                  metadata,
+                })
+              
+            } catch (error) {
+              // Handle cases where the token might not exist or other errors
+              console.warn(`Token ID ${tokenId} in collection ${collectionName} does not exist or cannot be fetched.`)
+            }
           }
         }
 
@@ -184,6 +200,10 @@ export const App = () => {
   // Function to mint a card for a user
   const mintCard = async (collectionId: number, toAddress: string, cardNumber: number, imgURI: string) => {
     if (!wallet) return
+    if (!isValidAddress(toAddress)) {
+      alert('Invalid recipient address.');
+      return;
+    }
     const { contract } = wallet
     try {
       const tx = await contract.mintCard(collectionId, toAddress, cardNumber, imgURI)
