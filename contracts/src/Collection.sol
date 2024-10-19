@@ -11,15 +11,16 @@ contract Collection is ERC721URIStorage, Ownable {
     }
 
     string public collectionName;
-    int public cardCount; // The total number of cards in the collection
+    uint256 public cardCount; // The total number of cards in the collection
     uint256 public nextTokenId;
 
     mapping(uint256 => Card) public cards; // Mapping tokenId to the card details
 
     // TODO: changer le nom
-    constructor(string memory _name, int _cardCount) 
+    constructor(string memory _name, uint256 _cardCount) 
       ERC721(_name, "NFTC") 
-      Ownable(msg.sender) {
+      Ownable(msg.sender)
+    {
         collectionName = _name;
         cardCount = _cardCount;
     }

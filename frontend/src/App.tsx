@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import styles from './styles.module.css'
 import * as ethereum from '@/lib/ethereum'
 import * as main from '@/lib/main'
-import { ethers, BigNumber, Contract } from 'ethers'
+import { ethers, BigNumber } from 'ethers'
 import collectionAbi from '@/abis/Collection.json'
 import mainAbi from '@/abis/Main.json'
 
@@ -29,7 +29,7 @@ const useAffect = (
 
 const useWallet = () => {
   const [details, setDetails] = useState<ethereum.Details>()
-  const [contract, setContract] = useState<ethers.Contract>()
+  const [contract, setContract] = useState<main.Main>()
 
   useAffect(async () => {
     const details_ = await ethereum.connect('metamask')
@@ -50,9 +50,9 @@ export const App = () => {
   const wallet = useWallet()
   const [nfts, setNfts] = useState<any[]>([])
   const [isOwner, setIsOwner] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
   const [collections, setCollections] = useState<any[]>([])
   const [balance, setBalance] = useState<string>('0')
+  const [refreshData, setRefreshData] = useState(false)
 
 
   // Function to fetch and log balance
@@ -90,6 +90,11 @@ export const App = () => {
           const ownerAddress = await contract.owner()
           console.log('Owner address of Main contract:', ownerAddress)
           console.log('Connected account:', account)
+
+          //debug
+          if (contract) {
+            console.log('Contract functions:', Object.keys(contract.functions));
+          }
 
           if (account) {
             setIsOwner(account.toLowerCase() === ownerAddress.toLowerCase())
@@ -147,6 +152,7 @@ export const App = () => {
         console.error('Error fetching NFTs:', error)
       }
     }
+
     const fetchAndLogBalance = async (provider: ethers.providers.Provider, address: string) => {
       try {
         const balanceBN = await provider.getBalance(address)
@@ -178,22 +184,38 @@ export const App = () => {
 
     fetchNFTs().catch(console.error)
     fetchCollections().catch(console.error)
-  }, [wallet])
+  }, [wallet, refreshData])
 
   // Function to create a new collection
   const createCollection = async (name: string, cardCount: number) => {
     if (!wallet) return
     const { contract } = wallet
     try {
+      const gasEstimate = await contract.estimateGas.createCollection(name, cardCount);
+      console.log('Gas estimate:', gasEstimate.toString());
       console.log('Creating collection with name:', name, 'and card count:', cardCount)
-      const tx = await contract.createCollection(name, cardCount)
+      const tx = await contract.createCollection(name, cardCount, {
+        gasLimit: gasEstimate.mul(2), // Double le gas limit
+      });
       console.log('Transaction sent:', tx.hash)
       await tx.wait()
       console.log('Transaction confirmed:', tx.hash)
       alert('Collection créée avec succès')
-    } catch (error) {
+
+      // refresh les données
+      setRefreshData(prev => !prev)
+
+    } catch (error: any) {
       console.error('Erreur lors de la création de la collection :', error)
-      alert('Erreur lors de la création de la collection.')
+      let message = 'Erreur lors de la création de la collection.';
+    if (error.code === 'CALL_EXCEPTION' && error.reason) {
+      message += ` Raison: ${error.reason}`;
+    } else if (error.data && error.data.message) {
+      message += ` Raison: ${error.data.message}`;
+    } else if (error.error && error.error.data && error.error.data.message) {
+      message += ` Raison: ${error.error.data.message}`;
+    }
+    alert('Erreur lors de la création de la collection.')
     }
   }
 
@@ -209,6 +231,8 @@ export const App = () => {
       const tx = await contract.mintCard(collectionId, toAddress, cardNumber, imgURI)
       await tx.wait()
       alert('Card minted successfully')
+      
+      setRefreshData(prev => !prev)
     } catch (error) {
       console.error('Error minting card:', error)
       alert('Error minting card.')
