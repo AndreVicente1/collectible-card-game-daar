@@ -39,11 +39,11 @@ const config: HardhatUserConfig = {
       // Configure custom accounts using private keys from environment variables
       accounts: [
         {
-          privateKey: process.env.DEPLOYER_PRIVATE_KEY || '0xe06Dc40BFfDe7bF770C77Ee63e9E34848b47718c',
+          privateKey: process.env.DEPLOYER_PRIVATE_KEY || '0x2051d560394E95981013E21160D0ee52EbbEF199',
           balance: '1000000000000000000000',
         },
         {
-          privateKey: process.env.DEPLOYER_PRIVATE_KEY || '0xe06Dc40BFfDe7bF770C77Ee63e9E34848b47718c',
+          privateKey: process.env.DEPLOYER_PRIVATE_KEY || '0x2051d560394E95981013E21160D0ee52EbbEF199',
           balance: '1000000000000000000000',
         },
         // Add more accounts if needed

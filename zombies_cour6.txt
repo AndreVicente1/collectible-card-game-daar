@@ -1,0 +1,89 @@
+var userAccount = web3.eth.accounts[0] -> compte actif
+
+changer l'interface selon l'utilisateur ->
+var accountInterval = setInterval(function() {
+  // Vérifie si le compte a changé
+  if (web3.eth.accounts[0] !== userAccount) {
+    userAccount = web3.eth.accounts[0];
+    // Appelle une fonction pour mettre à jour l'interface avec le nouveau compte
+    updateInterface();
+  }
+}, 100);
+-> toutes les 100 ms
+
+
+
+Donc nous voulons que notre fonction displayZombies fasse :
+
+Premièrement, supprime le contenu du div #zombies, s'il y a quelque chose à l'intérieur. (De cette manière, si l'utilisateur change de compte actif dans MetaMask, cela supprimera l'ancienne armée de zombie avant de charger la nouvelle).
+
+Itère pour chaque id, et pour chacun appelle getZombieDetails(id) pour récupérer toutes les informations de ce zombie à partir de notre smart contract, ensuite
+
+Mettre ces informations dans un gabarit HTML pour qu'elles soient correctement formatées pour l'affichage, et les rajouter au div #zombies.
+
+Qu'en est-il de l'affichage des images zombie ?
+Dans l'exemple ci-dessus, nous affichons simplement l'ADN comme une chaîne de caractères. Mais dans votre DApp, vous allez vouloir convertir cela en images pour afficher votre zombie.
+
+Nous avons fait cela en divisant l'ADN en plusieurs chaîne de caractères, et en ayant chaque pair de chiffre qui correspond à une image. De cette manière là :
+
+// On obtient un entier entre 1 et 7 qui représente la tête de notre zombie :
+var head = parseInt(zombie.dna.substring(0, 2)) % 7 + 1
+
+// On a 7 images de tête avec des noms de fichiers séquentiels :
+var headSrc = "../assets/zombieparts/head-" + head + ".png"
+
+
+
+msg.value = nb de ETH de l'utilisateur
+function levelUp(uint _zombieId) external payable {
+  require(msg.value == levelUpFee);
+  zombies[_zombieId].level++;
+}
+cryptoZombies.methods.levelUp(zombieId)
+.send({ from: userAccount, value: web3js.utils.toWei("0.001", "ether") })
+-> il send 0.001 ether quand il lvl up
+
+      function levelUp(zombieId) {
+        $("#txStatus").text("Votre zombie est en train de gagner un niveau...");
+        return cryptoZombies.methods.levelUp(zombieId)
+        .send({ from: userAccount, value: web3js.utils.toWei("0.001", "ether") })
+        .on("receipt", function(receipt) {
+          $("#txStatus").text("Quelle puissance écrasante ! Le zombie a bien gagné un niveau");
+        })
+        .on("error", function(error) {
+          $("#txStatus").text(error);
+        });
+      }
+
+
+
+Avec Web3.js, vous pouvez vous abonner à un évènement pour que votre fournisseur web3 exécute une certaine logique de votre code à chaque fois qu'il est émis :
+
+-> alerte pour tous les zombies
+cryptoZombies.events.NewZombie()
+.on("data", function(event) {
+  let zombie = event.returnValues;
+  // Nous pouvons accéder aux 3 valeurs de retour de cet évènement avec l'objet `event.returnValues` :
+  console.log("A new zombie was born!", zombie.zombieId, zombie.name, zombie.dna);
+}).on("error", console.error);
+
+// On utilise `filter` pour seulement lancer ce code quand `_to` est égal à `userAccount`
+cryptoZombies.events.Transfer({ filter: { _to: userAccount } })
+.on("data", function(event) {
+  let data = event.returnValues;
+  // L’utilisateur actuel a reçu un zombie !
+  // Faire quelque chose pour mettre à jour l'interface
+}).on("error", console.error);
+
+
+
+Nous pouvons interroger les évènements passés en utilisant getPastEvents, et utiliser les filtres fromBlock et toBlock pour indiquer à Solidity l'intervalle de temps pour récupérer nos évènements ("block" dans ce cas fait référence au numéro de bloc Ethereum) :
+
+cryptoZombies.getPastEvents("NewZombie", { fromBlock: 0, toBlock: "latest" })
+.then(function(events) {
+  // `events` est un tableau d'objets `event` pour lequel nous pouvons itérer, comme nous l'avons fait ci-dessus
+  // Ce code donnera une liste de tous les zombies créés
+});
+Puisque vous pouvez utiliser cette méthode pour récupérer tous les évènements depuis la nuit des temps, cela peut être un cas d'utilisation intéressant : Utiliser les évènements comme un moyen de stockage moins cher.
+
+
