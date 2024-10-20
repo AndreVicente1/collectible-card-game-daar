@@ -66,6 +66,95 @@ export const App = () => {
     }
   }
 
+  const fetchNFTs = async () => {
+    
+    if (!wallet) return
+    const { details, contract } = wallet
+    const { account, provider } = details
+
+    if (account) {
+      await fetchAndLogBalance(provider, account)
+    }
+    
+    const checkOwner = async () => {
+      try {
+        const ownerAddress = await contract.owner()
+        console.log('Owner address of Main contract:', ownerAddress)
+        console.log('Connected account:', account)
+
+        //debug
+        if (contract) {
+          console.log('Contract functions:', Object.keys(contract.functions));
+        }
+
+        if (account) {
+          setIsOwner(account.toLowerCase() === ownerAddress.toLowerCase())
+        }
+      } catch (error) {
+        console.error('Error fetching owner:', error)
+      }
+    }
+
+    await checkOwner()
+
+    try {
+      // Fetch the number of collections
+      const collectionCountBN: BigNumber = await contract.getCollectionCount()
+      const collectionCount = collectionCountBN.toNumber()
+
+      console.log('Number of collections:', collectionCount)
+      console.log('Fetching all NFTs...')
+      const allNFTs = []
+
+      for (let i = 0; i < collectionCount; i++) {
+        const [collectionName, , collectionAddress] = await contract.getCollection(i)
+        const collectionContract = new ethers.Contract(collectionAddress, collectionAbi, provider)
+
+        // Fetch the total number of tokens minted in this collection
+        const nextTokenIdBN: BigNumber = await collectionContract.nextTokenId()
+        const nextTokenId = nextTokenIdBN.toNumber()
+
+        // Iterate through all token IDs and check ownership
+        for (let tokenId = 0; tokenId < nextTokenId; tokenId++) {
+          try {
+              console.log(`Fetching token ID ${tokenId} in collection ${collectionName}...`)
+              const ownerOf = await collectionContract.ownerOf(tokenId)
+              var tokenURI = '';
+              if (account && ownerOf.toLowerCase() === account.toLowerCase()) {
+                tokenURI = await collectionContract.tokenURI(tokenId)
+              }
+              // Fetch metadata from tokenURI
+              const response = await fetch(tokenURI)
+              const metadata = await response.json()
+              console.log('Metadata:', metadata)
+              console.log('Image:', metadata.image)
+              allNFTs.push({
+                collectionId: i,
+                collectionName,
+                tokenId,
+                metadata,
+              })
+            
+              if (!account) return;
+              // Afficher si le token appartient à l'utilisateur connecté
+              if (ownerOf.toLowerCase() === account.toLowerCase()) {
+                console.log(`Le token ID ${tokenId} vous appartient.`)
+              } else {
+                console.log(`Le token ID ${tokenId} appartient à l'adresse ${ownerOf}.`)
+              }
+          } catch (error) {
+            // Handle cases where the token might not exist or other errors
+            console.warn(`Erreur lors de la récupération du Token ID ${tokenId} dans la collection ${collectionName}:`, error)
+          }
+        }
+      }
+
+      setNfts(allNFTs)
+    } catch (error) {
+      console.error('Error fetching NFTs:', error)
+    }
+  }
+
   const isValidAddress = (address: string) => {
     try {
       return ethers.utils.isAddress(address);
@@ -79,79 +168,6 @@ export const App = () => {
 
     const { details, contract } = wallet
     const { account, provider } = details
-
-    const fetchNFTs = async () => {
-      if (account) {
-        await fetchAndLogBalance(provider, account)
-      }
-      
-      const checkOwner = async () => {
-        try {
-          const ownerAddress = await contract.owner()
-          console.log('Owner address of Main contract:', ownerAddress)
-          console.log('Connected account:', account)
-
-          //debug
-          if (contract) {
-            console.log('Contract functions:', Object.keys(contract.functions));
-          }
-
-          if (account) {
-            setIsOwner(account.toLowerCase() === ownerAddress.toLowerCase())
-          }
-        } catch (error) {
-          console.error('Error fetching owner:', error)
-        }
-      }
-
-      await checkOwner()
-
-      try {
-        // Fetch the number of collections
-        const collectionCountBN: BigNumber = await contract.getCollectionCount()
-        const collectionCount = collectionCountBN.toNumber()
-
-        console.log('Number of collections:', collectionCount)
-        console.log('Fetching all NFTs...')
-        const allNFTs = []
-
-        for (let i = 0; i < collectionCount; i++) {
-          const [collectionName, , collectionAddress] = await contract.getCollection(i)
-          const collectionContract = new ethers.Contract(collectionAddress, collectionAbi, provider)
-
-          // Fetch the total number of tokens minted in this collection
-          const nextTokenIdBN: BigNumber = await collectionContract.nextTokenId()
-          const nextTokenId = nextTokenIdBN.toNumber()
-
-          // Iterate through all token IDs and check ownership
-          for (let tokenId = 0; tokenId < nextTokenId; tokenId++) {
-            try {
-                console.log(`Fetching token ID ${tokenId} in collection ${collectionName}...`)
-                const tokenURI = await collectionContract.tokenURI(tokenId)
-
-                // Fetch metadata from tokenURI
-                const response = await fetch(tokenURI)
-                const metadata = await response.json()
-                console.log('Metadata:', metadata)
-                console.log('Image:', metadata.image)
-                allNFTs.push({
-                  collectionName,
-                  tokenId,
-                  metadata,
-                })
-              
-            } catch (error) {
-              // Handle cases where the token might not exist or other errors
-              console.warn(`Token ID ${tokenId} in collection ${collectionName} does not exist or cannot be fetched.`)
-            }
-          }
-        }
-
-        setNfts(allNFTs)
-      } catch (error) {
-        console.error('Error fetching NFTs:', error)
-      }
-    }
 
     const fetchAndLogBalance = async (provider: ethers.providers.Provider, address: string) => {
       try {
@@ -229,10 +245,12 @@ export const App = () => {
     const { contract } = wallet
     try {
       const tx = await contract.mintCard(collectionId, toAddress, cardNumber, imgURI)
-      await tx.wait()
+      const receipt = await tx.wait()
+      console.log('Transaction receipt:', receipt)
       alert('Card minted successfully')
       
       setRefreshData(prev => !prev)
+      await fetchNFTs()
     } catch (error) {
       console.error('Error minting card:', error)
       alert('Error minting card.')
@@ -272,12 +290,32 @@ export const App = () => {
           <ul>
             {collections.map((col) => (
               <li key={col.id}>
-                {col.name} - {col.cardCount} cards - Address: {col.collectionAddress}
+                {col.name} - {col.cardCount} cards - ID: {col.id} - Address: {col.collectionAddress}
               </li>
             ))}
           </ul>
+
+          <div>
+          <h2>Toutes les Cartes</h2>
+          <div className={styles.grid}>
+            {nfts.map((nft, index) => (
+              <div key={index} className={styles.cell}>
+                <h3>{nft.collectionName} (ID de la Collection: {nft.collectionId})</h3>
+                <p>ID du Token: {nft.tokenId}</p>
+                {nft.metadata.image && (
+                  <img src={nft.metadata.image} alt={nft.metadata.name} />
+                )}
+                <p>{nft.metadata.name}</p>
+                <p>Propriétaire: {nft.owner}</p>
+              </div>
+            ))}
+          </div>
         </div>
+
+        </div>
+        
       )}
+      
 
       {wallet && isOwner && (
         <>
@@ -309,7 +347,7 @@ export const App = () => {
             />
             <input
               type="text"
-              placeholder="Recipient Address"
+              placeholder="User Address"
               value={recipientAddress}
               onChange={(e) => setRecipientAddress(e.target.value)}
             />

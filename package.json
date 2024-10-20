@@ -7,14 +7,21 @@
   "license": "MIT",
   "scripts": {
     "postinstall": "yarn --cwd contracts install && yarn --cwd frontend install",
-    "dev": "concurrently -c \"blue.bold,red.bold\" --names \"ethereum,frontend\" \"yarn --cwd contracts dev\" \"yarn --cwd frontend dev\""
+    "start": "node server.js",
+    "dev": "concurrently -c \"blue.bold,red.bold\" --names \"ethereum,frontend\" \"yarn --cwd contracts dev\" \"yarn --cwd frontend dev\" \"cd backend && yarn dev\""
   },
   "devDependencies": {
     "@typechain/ethers-v5": "^11.1.2",
     "concurrently": "^9.0.1",
+    "nodemon": "^3.1.7",
     "typechain": "^8.3.2"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.0.2"
+    "@openzeppelin/contracts": "^5.0.2",
+    "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "mongoose": "^8.7.2"
   }
 }
