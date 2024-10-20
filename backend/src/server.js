@@ -12,16 +12,16 @@ app.use(cors());
 app.use(express.json());
 
 // Connexion à MongoDB
-//mongoose.connect(process.env.MONGODB_URI, {
-//  useNewUrlParser: true,
-//  useUnifiedTopology: true,
-//})
-//.then(() => {
-//  console.log('Connecté à MongoDB');
-//})
-//.catch((err) => {
-//  console.error('Erreur de connexion à MongoDB:', err);
-//});
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('Connecté à MongoDB');
+})
+.catch((err) => {
+  console.error('Erreur de connexion à MongoDB:', err);
+});
 console.log('cc');
 // Routes
 app.get('/', (req, res) => {
