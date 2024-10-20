@@ -1,5 +1,4 @@
-
-
+// backend/server.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -22,15 +21,16 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch((err) => {
   console.error('Erreur de connexion à MongoDB:', err);
 });
+
 console.log('cc');
+
 // Routes
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-// Exemple d'API
-//const cardsRouter = require('./routes/cards');
-//app.use('/cards', cardsRouter);
+const imagesRouter = require('./routes/images');
+app.use('/images', imagesRouter);
 
 // Démarrer le serveur
 const PORT = process.env.PORT || 5000;

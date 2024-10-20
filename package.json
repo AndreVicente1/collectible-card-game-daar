@@ -8,7 +8,7 @@
   "scripts": {
     "postinstall": "yarn --cwd contracts install && yarn --cwd frontend install",
     "start": "node server.js",
-    "dev": "concurrently -c \"blue.bold,red.bold\" --names \"ethereum,frontend\" \"yarn --cwd contracts dev\" \"yarn --cwd frontend dev\" \"cd backend && yarn dev\""
+    "dev": "concurrently -c \"blue.bold,red.bold\" --names \"ethereum,frontend,backend\" \"yarn --cwd contracts dev\" \"yarn --cwd frontend dev\" \"cd backend && yarn --cwd backend dev\""
   },
   "devDependencies": {
     "@typechain/ethers-v5": "^11.1.2",
