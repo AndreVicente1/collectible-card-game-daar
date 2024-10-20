@@ -1,14 +1,15 @@
-// backend/routes/images.js
+// backend/src/routes/images.js
 const express = require('express');
 const router = express.Router();
 const upload = require('../upload'); // Multer middleware
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
-const PinataSDK = require('@pinata/sdk').default || require('@pinata/sdk');
+const PinataSDK = require('@pinata/sdk');
+const { Readable } = require('stream'); // Import Readable
 const Image = require('../models/Image');
 const Metadata = require('../models/Metadata');
 
-// Initialiser Pinata
+// Initialiser Pinata avec 'new'
 const pinata = new PinataSDK(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_API_KEY);
 
 // Route POST /images : Upload d'une image et de ses métadonnées
@@ -31,7 +32,7 @@ router.post('/', upload.single('image'), async (req, res) => {
     const imageName = `${uuidv4()}_${req.file.originalname}`;
 
     // Uploader l'image sur Pinata (IPFS)
-    const imageStream = Buffer.from(req.file.buffer);
+    const imageBuffer = req.file.buffer; // Buffer de l'image
     const imageOptions = {
       pinataMetadata: {
         name: imageName,
@@ -41,7 +42,9 @@ router.post('/', upload.single('image'), async (req, res) => {
       },
     };
 
-    const imageResult = await pinata.pinFileToIPFS(imageStream, imageOptions);
+    // Convertir le buffer en Readable Stream
+    const readableStream = Readable.from(imageBuffer);
+    const imageResult = await pinata.pinFileToIPFS(readableStream, imageOptions);
 
     const imageURI = `ipfs://${imageResult.IpfsHash}`;
 
@@ -70,7 +73,9 @@ router.post('/', upload.single('image'), async (req, res) => {
       },
     };
 
-    const metadataResult = await pinata.pinFileToIPFS(metadataBuffer, metadataOptions);
+    // Convertir le buffer en Readable Stream pour les métadonnées
+    const metadataReadableStream = Readable.from(metadataBuffer);
+    const metadataResult = await pinata.pinFileToIPFS(metadataReadableStream, metadataOptions);
 
     const metadataURI = `ipfs://${metadataResult.IpfsHash}`;
 
@@ -112,7 +117,7 @@ router.get('/:uri', async (req, res) => {
   }
 });
 
-// Route GET /metadata/:uri : Récupérer les métadonnées associées à une URI
+// Route GET /images/metadata/:uri : Récupérer les métadonnées associées à une URI
 router.get('/metadata/:uri', async (req, res) => {
   try {
     const { uri } = req.params;
