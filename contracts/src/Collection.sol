@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Collection is ERC721URIStorage, Ownable {
     struct Card {
         uint256 cardNumber;
-        string imgURI;
+        string metadataURI;
     }
 
     string public collectionName;
@@ -26,7 +26,7 @@ contract Collection is ERC721URIStorage, Ownable {
     }
 
     // Mint a new card (NFT) with a card number and image URI
-    function mint(address _to, uint256 _cardNumber, string memory _imgURI) external onlyOwner {
+    function mint(address _to, uint256 _cardNumber, string memory _metadataURI) external onlyOwner {
         require(nextTokenId < uint256(cardCount), "Card limit reached for this collection");
 
         uint256 tokenId = nextTokenId;
@@ -38,14 +38,10 @@ contract Collection is ERC721URIStorage, Ownable {
         // Store card details in the mapping
         cards[tokenId] = Card({
             cardNumber: _cardNumber,
-            imgURI: _imgURI
+            metadataURI: _metadataURI
         });
 
-        // Create the token URI (metadata) for the NFT
-        string memory tokenURI = string(abi.encodePacked(
-            '{"name": "Card #', uint2str(_cardNumber), '", "image": "', _imgURI, '"}'
-        ));
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, _metadataURI);
     }
 
     // Helper function to convert uint256 to string
@@ -74,6 +70,6 @@ contract Collection is ERC721URIStorage, Ownable {
     // Retrieve card details by tokenId
     function getCardDetails(uint256 tokenId) external view returns (uint256, string memory) {
         Card memory card = cards[tokenId];
-        return (card.cardNumber, card.imgURI);
+        return (card.cardNumber, card.metadataURI);
     }
 }

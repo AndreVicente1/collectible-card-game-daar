@@ -41,12 +41,12 @@ contract Main is Ownable {
     }
 
     // Mint a card in a specific collection for a user
-    function mintCard(uint256 _collectionId, address _to, uint256 _cardNumber, string memory _imgURI) external onlyOwner {
+    function mintCard(uint256 _collectionId, address _to, uint256 _cardNumber, string memory _metadataURI) external onlyOwner {
         require(_collectionId < collections.length, "Collection does not exist");
         CollectionInfo storage collectionInfo = collections[_collectionId];
 
         // Mint a card from the selected collection
-        Collection(collectionInfo.collectionAddress).mint(_to, _cardNumber, _imgURI);
+        Collection(collectionInfo.collectionAddress).mint(_to, _cardNumber, _metadataURI);
 
         emit CardMinted(_collectionId, _to, _cardNumber);
     }
