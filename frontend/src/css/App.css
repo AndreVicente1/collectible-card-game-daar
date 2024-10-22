@@ -1,0 +1,22 @@
+.app {
+    text-align: center;
+    padding: 20px;
+    background-color: #f5f5f5;
+    min-height: 100vh;
+  }
+  
+  h1 {
+    color: #333;
+  }
+  
+  .cards-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .loading,
+  .error {
+    font-size: 1.5em;
+    color: #555;
+  }

@@ -6,6 +6,33 @@ import * as main from '@/lib/main'
 import { ethers, BigNumber } from 'ethers'
 import collectionAbi from '@/abis/Collection.json'
 import mainAbi from '@/abis/Main.json'
+import axios from 'axios'
+import Card from './components/Card'
+import './css/App.css'
+import React from 'react'
+
+
+interface CardAPI {
+  _id: string;
+  id: number;
+  name: string;
+  type: string;
+  set: {
+    _id: string;
+    name: string;
+    slug: string;
+  };
+  rarity: string;
+  description: string;
+  image: string;
+  attributes: Array<{
+    trait_type: string;
+    value: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 type Canceler = () => void
 
@@ -53,6 +80,11 @@ export const App = () => {
   const [collections, setCollections] = useState<any[]>([])
   const [balance, setBalance] = useState<string>('0')
   const [refreshData, setRefreshData] = useState(false)
+
+  const [collectionsAPI, setCollectionsAPI] = useState<any[]>([])
+  const [cardsAPI, setCardsAPI] = useState<CardAPI[]>([])
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
 
   // Function to fetch and log balance
@@ -198,9 +230,31 @@ export const App = () => {
       }
     }
 
+    const fetchCards = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/hearthstone/cards');
+        setCardsAPI(response.data.cards);
+        setLoading(false);
+      } catch (err: any) {
+        console.error('Error fetching cards:', err);
+        setError(err.response?.data?.message || 'Error fetching cards');
+        setLoading(false);
+      }
+    }
+
+    fetchCards().catch(console.error);
+
     fetchNFTs().catch(console.error)
     fetchCollections().catch(console.error)
   }, [wallet, refreshData])
+
+  if (loading) {
+    return <div className="loading">Chargement des cartes...</div>;
+  }
+
+  if (error) {
+    return <div className="error">Erreur: {error}</div>;
+  }
 
   // Function to create a new collection
   const createCollection = async (name: string, cardCount: number) => {
@@ -235,27 +289,57 @@ export const App = () => {
     }
   }
 
+  const [imageFile, setImageFile] = useState<File | null>(null)
+
   // Function to mint a card for a user
-  const mintCard = async (collectionId: number, toAddress: string, cardNumber: number, imgURI: string) => {
-    if (!wallet) return
+  const mintCard = async (collectionId: number, toAddress: string, cardNumber: number) => {
+    if (!wallet) {
+      alert('Wallet not connected.');
+      return;
+    }
     if (!isValidAddress(toAddress)) {
       alert('Invalid recipient address.');
       return;
     }
-    const { contract } = wallet
-    try {
-      const tx = await contract.mintCard(collectionId, toAddress, cardNumber, imgURI)
-      const receipt = await tx.wait()
-      console.log('Transaction receipt:', receipt)
-      alert('Card minted successfully')
-      
-      setRefreshData(prev => !prev)
-      await fetchNFTs()
-    } catch (error) {
-      console.error('Error minting card:', error)
-      alert('Error minting card.')
+    if (!imageFile) {
+      alert('Please upload an image.');
+      return;
     }
-  }
+    
+    const { contract } = wallet;
+
+    try {
+      // Step 1: Upload the image and get metadata URI
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const uploadResponse = await axios.post('http://localhost:5000/images', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const { metadataURI } = uploadResponse.data;
+      console.log('Metadata URI:', metadataURI);
+
+      // Step 2: Fetch metadata to get image URI from the metadata
+      const metadataResponse = await axios.get(metadataURI);
+      const imageURI = metadataResponse.data.image;
+      console.log('Image URI:', imageURI);
+
+      // Step 3: Mint the card using the imageURI
+      const tx = await contract.mintCard(collectionId, toAddress, cardNumber, imageURI);
+      const receipt = await tx.wait();
+      console.log('Transaction receipt:', receipt);
+      alert('Card minted successfully');
+      
+      setRefreshData(prev => !prev);
+      await fetchNFTs();
+    } catch (error) {
+      console.error('Error minting card:', error);
+      alert('Error minting card.');
+    }
+  };
 
   const [collectionName, setCollectionName] = useState('')
   const [cardCount, setCardCount] = useState(0)
@@ -263,7 +347,6 @@ export const App = () => {
   const [collectionId, setCollectionId] = useState(0)
   const [recipientAddress, setRecipientAddress] = useState('')
   const [cardNumber, setCardNumber] = useState(0)
-  const [imgURI, setImgURI] = useState('')
 
   return (
     <div className={styles.body}>
@@ -295,22 +378,14 @@ export const App = () => {
             ))}
           </ul>
 
-          <div>
-          <h2>Toutes les Cartes</h2>
-          <div className={styles.grid}>
-            {nfts.map((nft, index) => (
-              <div key={index} className={styles.cell}>
-                <h3>{nft.collectionName} (ID de la Collection: {nft.collectionId})</h3>
-                <p>ID du Token: {nft.tokenId}</p>
-                {nft.metadata.image && (
-                  <img src={nft.metadata.image} alt={nft.metadata.name} />
-                )}
-                <p>{nft.metadata.name}</p>
-                <p>Propriétaire: {nft.owner}</p>
-              </div>
-            ))}
+          <div className="app">
+            <h1>Liste des Cartes Hearthstone</h1>
+            <div className="cards-container">
+              {cardsAPI.map((card) => (
+                <Card key={card.id} card={card} />
+              ))}
+            </div>
           </div>
-        </div>
 
         </div>
         
@@ -338,33 +413,35 @@ export const App = () => {
             <button onClick={() => createCollection(collectionName, cardCount)}>Create Collection</button>
           </div>
           <div>
-            <h2>Mint a New Card</h2>
-            <input
-              type="number"
-              placeholder="Collection ID"
-              value={collectionId}
-              onChange={(e) => setCollectionId(Number(e.target.value))}
-            />
-            <input
-              type="text"
-              placeholder="User Address"
-              value={recipientAddress}
-              onChange={(e) => setRecipientAddress(e.target.value)}
-            />
-            <input
-              type="number"
-              placeholder="Card Number"
-              value={cardNumber}
-              onChange={(e) => setCardNumber(Number(e.target.value))}
-            />
-            <input
-              type="text"
-              placeholder="Image URI"
-              value={imgURI}
-              onChange={(e) => setImgURI(e.target.value)}
-            />
-            <button onClick={() => mintCard(collectionId, recipientAddress, cardNumber, imgURI)}>Mint Card</button>
-          </div>
+                <h2>Mint a New Card</h2>
+                <input
+                  type="number"
+                  placeholder="Collection ID"
+                  value={collectionId}
+                  onChange={(e) => setCollectionId(Number(e.target.value))}
+                />
+                <input
+                  type="text"
+                  placeholder="User Address"
+                  value={recipientAddress}
+                  onChange={(e) => setRecipientAddress(e.target.value)}
+                />
+                <input
+                  type="number"
+                  placeholder="Card Number"
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(Number(e.target.value))}
+                />
+                {/* File input for image upload */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
+                />
+                <button onClick={() => mintCard(collectionId, recipientAddress, cardNumber)}>
+                  Mint Card
+                </button>
+              </div>
         </>
       )}
     </div>

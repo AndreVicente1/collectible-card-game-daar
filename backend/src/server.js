@@ -25,8 +25,8 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => {
   console.log('Connecté à MongoDB');
 
-  // creation
-  syncHearthstoneCards();
+  // sets + cartes dans db, plus besoin, on a déjà tout récupéré
+  //syncHearthstoneCards(); 
 
   // Démarrer le serveur
   const PORT = process.env.PORT || 5000;

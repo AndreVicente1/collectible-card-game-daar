@@ -1,5 +1,6 @@
 const axios = require('axios');
 const HearthstoneCard = require('./models/HearthstoneCard');
+const HearthstoneSet = require('./models/HearthstoneSet');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -56,7 +57,37 @@ const fetchSetMetadata = async (accessToken) => {
             },
         });
 
-        return setsResponse.data;
+        console.log('Sets:', setsResponse.data);
+
+        const sets = setsResponse.data;
+
+        // Stocker les sets dans MongoDB
+        for (const set of sets) {
+            //if (!setsToInclude.includes(set.name)) continue;
+    
+            // Vérifier si le set existe déjà
+            const existingSet = await HearthstoneSet.findOne({ id: set.id });
+    
+            if (!existingSet) {
+            const newSet = new HearthstoneSet({
+                id: set.id,
+                name: set.name,
+                slug: set.slug,
+                hyped: set.hyped || false,
+                type: set.type,
+                collectibleCount: set.collectibleCount || 0,
+                collectibleRevealedCount: set.collectibleRevealedCount || 0,
+                nonCollectibleCount: set.nonCollectibleCount || 0,
+                nonCollectibleRevealedCount: set.nonCollectibleRevealedCount || 0,
+            });
+    
+            await newSet.save();
+            console.log(`Saved set: ${set.name}`);
+            }
+        }
+
+        return sets;
+
     } catch (error) {
         console.error('Error fetching set metadata:', error.response ? error.response.data : error.message);
         throw error;
