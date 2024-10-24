@@ -2,6 +2,7 @@
 pragma solidity ^0.8;
 
 import "./Collection.sol";
+import "./Booster.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
 
@@ -25,10 +26,10 @@ contract Main is Ownable {
     //function fallback() external {}
     
     // Create a new collection with a name and card count
-    function createCollection(string memory _name, uint256 _cardCount) external onlyOwner {
+    function createCollection(string memory _name, uint256 _cardCount, Collection.Card[] memory _cards) external onlyOwner {
         // Deploy a new Collection contract for this collection
         console.log("Creating collection with name:", _name);
-        Collection newCollection = new Collection(_name, _cardCount);
+        Collection newCollection = new Collection(_name, _cardCount, _cards);
         console.log("Collection created, address:", address(newCollection));
         
         collections.push(CollectionInfo({
@@ -41,12 +42,12 @@ contract Main is Ownable {
     }
 
     // Mint a card in a specific collection for a user
-    function mintCard(uint256 _collectionId, address _to, uint256 _cardNumber, string memory _metadataURI) external onlyOwner {
+    function mintCard(uint256 _collectionId, address _to, uint256 _cardNumber, string memory _cardName, string memory _metadataURI) external onlyOwner {
         require(_collectionId < collections.length, "Collection does not exist");
         CollectionInfo storage collectionInfo = collections[_collectionId];
 
         // Mint a card from the selected collection
-        Collection(collectionInfo.collectionAddress).mint(_to, _cardNumber, _metadataURI);
+        Collection(collectionInfo.collectionAddress).mint(_to, _cardNumber, _cardName, _metadataURI);
 
         emit CardMinted(_collectionId, _to, _cardNumber);
     }
@@ -62,4 +63,7 @@ contract Main is Ownable {
         CollectionInfo storage collectionInfo = collections[_collectionId];
         return (collectionInfo.name, collectionInfo.cardCount, collectionInfo.collectionAddress);
     }
+
+    // Boosters
+
 }

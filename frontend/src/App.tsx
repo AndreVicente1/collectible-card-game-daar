@@ -103,6 +103,7 @@ export const App = () => {
       const balanceBN = await provider.getBalance(address)
       const balance = ethers.utils.formatEther(balanceBN)
       console.log(`Balance of ${address}: ${balance} ETH`)
+      setBalance(balance) // Met à jour l'état
     } catch (error) {
       console.error('Error fetching balance:', error)
     }
@@ -213,17 +214,6 @@ export const App = () => {
 
     const { details, contract } = wallet
     const { account, provider } = details
-
-    const fetchAndLogBalance = async (provider: ethers.providers.Provider, address: string) => {
-      try {
-        const balanceBN = await provider.getBalance(address)
-        const balance = ethers.utils.formatEther(balanceBN)
-        console.log(`Balance of ${address}: ${balance} ETH`)
-        setBalance(balance) // Update state
-      } catch (error) {
-        console.error('Error fetching balance:', error)
-      }
-    }
     
     const fetchCollections = async () => {
       try {
@@ -277,10 +267,10 @@ export const App = () => {
     if (!wallet) return
     const { contract } = wallet
     try {
-      const gasEstimate = await contract.estimateGas.createCollection(name, cardCount);
+      const gasEstimate = await contract.estimateGas.createCollection(name, cardCount, []);
       console.log('Gas estimate:', gasEstimate.toString());
       console.log('Creating collection with name:', name, 'and card count:', cardCount)
-      const tx = await contract.createCollection(name, cardCount, {
+      const tx = await contract.createCollection(name, cardCount, [], {
         gasLimit: gasEstimate.mul(2), // Double le gas limit
       });
       console.log('Transaction sent:', tx.hash)
@@ -334,7 +324,7 @@ export const App = () => {
       const metadataURI = `http://localhost:5000/hearthstone/cards/${card.id}`;
   
       // Mint la carte en utilisant le metadataURI
-      const tx = await contract.mintCard(collectionId, toAddress, card.id, metadataURI);
+      const tx = await contract.mintCard(collectionId, toAddress, card.id, card.name, metadataURI);
       const receipt = await tx.wait();
       console.log('Transaction receipt:', receipt);
       alert('Card minted successfully');

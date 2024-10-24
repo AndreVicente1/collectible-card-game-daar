@@ -1,6 +1,7 @@
 const express = require('express');
 const HearthstoneSet = require('../models/HearthstoneSet');
 const HearthstoneCard = require('../models/HearthstoneCard');
+const {createCollection} = require('../hearthstoneAPI');
 
 const router = express.Router();
 
@@ -48,25 +49,6 @@ router.get('/cards', async (req, res) => {
     res.status(200).json({ cards });
   } catch (error) {
     console.error('Error fetching cards:', error);
-    res.status(500).json({ message: 'Internal server error.' });
-  }
-});
-
-// get card by id
-router.get('/cards/:id', async (req, res) => {
-  try {
-    const cardId = parseInt(req.params.id, 10);
-    const card = await HearthstoneCard.findOne({ id: cardId })
-      .populate('set', 'name slug')
-      .select('-__v');
-
-    if (!card) {
-      return res.status(404).json({ message: 'Card not found.' });
-    }
-
-    res.status(200).json({ card });
-  } catch (error) {
-    console.error('Error fetching card:', error);
     res.status(500).json({ message: 'Internal server error.' });
   }
 });
@@ -124,5 +106,7 @@ router.get('/cards/name/:name', async (req, res) => {
     res.status(500).json({ message: 'Internal server error.' });
   }
 });
+
+router.post('/create-collections', createCollection);
 
 module.exports = router;

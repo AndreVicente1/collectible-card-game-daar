@@ -2,11 +2,20 @@ const axios = require('axios');
 const HearthstoneCard = require('./models/HearthstoneCard');
 const HearthstoneSet = require('./models/HearthstoneSet');
 const dotenv = require('dotenv');
+const { ethers } = require('ethers');
 
 dotenv.config();
 
 const clientId = process.env.BLIZZARD_CLIENT_ID;
 const clientSecret = process.env.BLIZZARD_CLIENT_SECRET;
+
+const contract = require('../../contracts/artifacts/src/Main.sol/Main.json');
+
+const provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
+const contractAdd = '0xA748471B4a65567BE67976C62787040D62D335af'
+const wallet = new ethers.Wallet(process.env.ADDRESSE_CONTRAT, provider);
+
+const mainContract = new ethers.Contract(contractAdd, contract.abi, wallet);
 
 let accessToken = '';
 let tokenExpiresAt = 0;
@@ -204,4 +213,36 @@ const syncHearthstoneCards = async () => {
     }
 };
 
-module.exports = syncHearthstoneCards;
+
+/* --------------------------------------------------------------- */
+
+// creer des collections
+const createCollection = async (req, res) => {
+    try {
+        console.log('and cards...');
+
+        const allSets = await HearthstoneSet.find({});
+        for (const set of allSets) {
+            const cards = await HearthstoneCard.find({ set: set.name });
+            const cardsForContract = cards.map((card, index) => ({
+                cardNumber: card.id,
+                cardName: card.name,
+                metadataURI: card.image,
+            }));
+
+            // Créer la collection sur la blockchain
+            
+            const tx = await mainContract.createCollection(set.name, cardsForContract.length, cardsForContract);
+            const receipt = await tx.wait();
+
+            console.log(`Collection ${set.name} créée avec succès. Transaction hash: ${receipt.transactionHash}`);
+        }
+
+        res.json({ message: 'Collections créées avec succès sur la blockchain' });
+    } catch (err) {
+        console.error('Erreur lors de la création des collections et des cartes: ', err);
+        res.status(500).json({ error: 'Erreur lors de la création des collections et des cartes' });
+    }
+};
+
+module.exports = {syncHearthstoneCards, createCollection};

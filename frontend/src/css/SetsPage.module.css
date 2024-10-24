@@ -57,3 +57,33 @@
     color: inherit;
 }
   
+
+.syncButton {
+    padding: 10px 20px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 1em;
+  }
+  
+  .syncButton:hover {
+    background-color: #2980b9;
+  }
+  
+  .syncButton:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+  }
+  
+  .successMessage {
+    color: #27ae60;
+    margin-top: 10px;
+  }
+  
+  .errorMessage {
+    color: #e74c3c;
+    margin-top: 10px;
+  }
