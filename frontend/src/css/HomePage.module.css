@@ -60,41 +60,59 @@
 }
 
 .syncButton:hover {
-background-color: #2980b9;
+    background-color: #2980b9;
 }
 
 .syncButton:disabled {
-background-color: #95a5a6;
-cursor: not-allowed;
+    background-color: #95a5a6;
+    cursor: not-allowed;
 }
 
 .successMessage {
-color: #27ae60;
-margin-top: 10px;
+    color: #27ae60;
+    margin-top: 10px;
 }
 
 .errorMessage {
-color: #e74c3c;
-margin-top: 10px;
+    color: #e74c3c;
+    margin-top: 10px;
+}
+
+.collectionsContainer {
+    width: 100%;
+    max-width: 600px;
+    margin-top: 40px;
+    text-align: center;
 }
 
 .collectionsList {
-display: flex;
-flex-wrap: wrap;
-justify-content: flex-start;
-gap: 20px; 
-list-style-type: none;
-padding: 0;
-margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px; 
+    list-style-type: none;
+    padding: 10px;
+    margin-top: 20px;
+    background-color: rgba(0, 0, 0, 0.1); /* Fond plus sombre pour un meilleur contraste */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    max-height: 400px; /* Limite la hauteur pour permettre le défilement */
+    overflow-y: auto;
 }
-  
 
 .collectionItem {
-flex: 1 1 auto;
-min-width: 200px;
-white-space: nowrap;
-text-overflow: ellipsis; 
-overflow: hidden;
+    padding: 10px 15px; /* Augmentation du padding */
+    min-height: 50px; /* Hauteur minimale pour chaque élément */
+    width: 100%;
+    white-space: nowrap;
+    text-overflow: ellipsis; 
+    overflow: hidden;
+    transition: background-color 0.2s ease;
+    color: #ffffff; /* Assure que le texte est blanc */
+}
+
+.collectionItem:hover {
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .countdownMessage {
@@ -102,4 +120,29 @@ overflow: hidden;
     margin-top: 10px;
     font-size: 1em;
     font-weight: bold;
-  }
+}
+
+.dropdownButton {
+    padding: 10px 20px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 1em;
+    margin-top: 10px;
+}
+
+.dropdownButton:hover {
+    background-color: #27ae60;
+}
+
+/* Ajout de styles pour le conteneur déroulant */
+.dropdownContent {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    z-index: 1; /* Assure que le contenu est au-dessus d'autres éléments */
+}

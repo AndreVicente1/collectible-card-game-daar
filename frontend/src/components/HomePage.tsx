@@ -39,8 +39,10 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
   const [collectionsLoading, setCollectionsLoading] = useState<boolean>(true);
   const [collectionsError, setCollectionsError] = useState<string | null>(null);
 
-
   const [hasSynced, setHasSynced] = useState<boolean>(false);
+
+  // Nouvel état pour gérer l'ouverture du menu déroulant
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
   // Fonction pour gérer la synchronisation des collections
   const handleSyncCollections = async () => {
@@ -78,7 +80,6 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
     }
   };
 
-
   useEffect(() => {
     if (isOwner && countdown === null && !syncing && !hasSynced) {
       setCountdown(3); 
@@ -102,6 +103,10 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
       fetchCollections();
     }
   }, [syncSuccess]);
+
+  useEffect(() => {
+    fetchCollections();
+  }, []); // Récupère les collections au montage du composant
 
   const handleManualSync = () => {
     if (!syncing) {
@@ -158,21 +163,32 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
         </div>
       )}
 
-      {/* Chargement et affichage des collections */}
+      {/* Chargement et affichage des collections avec menu déroulant */}
       <div className={styles.collectionsContainer}>
         <h2>Collections disponibles</h2>
-        {collectionsLoading ? (
-          <div className={styles.loading}>Chargement des collections...</div>
-        ) : collectionsError ? (
-          <div className={styles.error}>{collectionsError}</div>
-        ) : (
-          <ul className={styles.collectionsList}>
-            {collections.map((collection, index) => (
-              <li key={index} className={styles.collectionItem}>
-                <strong>{collection.name}</strong> - {collection.cardCount} cartes - {collection.address}
-              </li>
-            ))}
-          </ul>
+        <p>Total Collections: {collections.length}</p>
+        <button
+          className={styles.dropdownButton}
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        >
+          {isDropdownOpen ? 'Masquer Collections ▲' : 'Afficher Collections ▼'}
+        </button>
+        {isDropdownOpen && (
+          <div className={styles.dropdownContent}>
+            {collectionsLoading ? (
+              <div className={styles.loading}>Chargement des collections...</div>
+            ) : collectionsError ? (
+              <div className={styles.error}>{collectionsError}</div>
+            ) : (
+              <ul className={styles.collectionsList}>
+                {collections.map((collection, index) => (
+                  <li key={index} className={styles.collectionItem}>
+                    <strong>{collection.name}</strong> - {collection.cardCount} carte{collection.cardCount > 1 ? 's' : ''} - {collection.address}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </div>
     </div>
