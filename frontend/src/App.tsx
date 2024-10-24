@@ -381,7 +381,7 @@ export const App = () => {
           <Routes>
             <Route
               path="/"
-              element={<HomePage nfts={nfts} balance={balance} loading={loading} error={error} />}
+              element={<HomePage nfts={nfts} balance={balance} isOwner={isOwner} loading={loading} error={error} />}
             />
 
             <Route

@@ -28,6 +28,7 @@ contract Main is Ownable {
     // Create a new collection with a name and card count
     function createCollection(string memory _name, uint256 _cardCount, Collection.Card[] memory _cards) external onlyOwner {
         // Deploy a new Collection contract for this collection
+        require(_cardCount >= 0, "Card count must be greater or zero");
         console.log("Creating collection with name:", _name);
         Collection newCollection = new Collection(_name, _cardCount, _cards);
         console.log("Collection created, address:", address(newCollection));
@@ -39,6 +40,15 @@ contract Main is Ownable {
         }));
 
         emit CollectionCreated(_name, _cardCount, address(newCollection));
+    }
+
+    function collectionExists(string memory _name) public view returns (bool) {
+        for (uint256 i = 0; i < collections.length; i++) {
+            if (keccak256(abi.encodePacked(collections[i].name)) == keccak256(abi.encodePacked(_name))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Mint a card in a specific collection for a user

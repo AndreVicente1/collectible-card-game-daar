@@ -12,10 +12,9 @@ const clientSecret = process.env.BLIZZARD_CLIENT_SECRET;
 const contract = require('../../contracts/artifacts/src/Main.sol/Main.json');
 
 const provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
-const contractAdd = '0xA748471B4a65567BE67976C62787040D62D335af'
-const wallet = new ethers.Wallet(process.env.ADDRESSE_CONTRAT, provider);
+const wallet = new ethers.Wallet(process.env.ADDRESSE_ADMIN, provider);
 
-const mainContract = new ethers.Contract(contractAdd, contract.abi, wallet);
+const mainContract = new ethers.Contract(process.env.ADDRESSE_CONTRAT, contract.abi, wallet);
 
 let accessToken = '';
 let tokenExpiresAt = 0;
@@ -220,27 +219,41 @@ const syncHearthstoneCards = async () => {
 const createCollection = async (req, res) => {
     try {
         console.log('and cards...');
-
+        
+        let nonce = await provider.getTransactionCount(wallet.address, "latest");
         const allSets = await HearthstoneSet.find({});
         for (const set of allSets) {
-            const cards = await HearthstoneCard.find({ set: set.name });
+            const exists = await mainContract.collectionExists(set.name);
+            if (exists) {
+                console.log(`La collection ${set.name} existe déjà sur la blockchain. Elle ne sera pas recréée.`);
+                continue;
+            }
+
+            const cards = await HearthstoneCard.find({ set: set.name }).limit(5);
             const cardsForContract = cards.map((card, index) => ({
                 cardNumber: card.id,
                 cardName: card.name,
                 metadataURI: card.image,
             }));
 
+            const gasEstimate = await mainContract.estimateGas.createCollection(set.name, cardsForContract.length, cardsForContract);
+            console.log(`Gas estimé : ${gasEstimate.toString()}`);
+
             // Créer la collection sur la blockchain
-            
-            const tx = await mainContract.createCollection(set.name, cardsForContract.length, cardsForContract);
+
+            const tx = await mainContract.createCollection(set.name, cardsForContract.length, cardsForContract, {
+                gasLimit: gasEstimate.mul(2),
+                nonce: nonce
+            });
             const receipt = await tx.wait();
 
             console.log(`Collection ${set.name} créée avec succès. Transaction hash: ${receipt.transactionHash}`);
+            nonce++;
         }
 
         res.json({ message: 'Collections créées avec succès sur la blockchain' });
     } catch (err) {
-        console.error('Erreur lors de la création des collections et des cartes: ', err);
+        console.error('Erreur lors de la création des collections et des cartes: ');
         res.status(500).json({ error: 'Erreur lors de la création des collections et des cartes' });
     }
 };
