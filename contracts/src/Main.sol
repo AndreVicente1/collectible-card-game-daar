@@ -74,6 +74,22 @@ contract Main is Ownable {
         return (collectionInfo.name, collectionInfo.cardCount, collectionInfo.collectionAddress);
     }
 
+    function getCollections() external view returns (string[] memory, address[] memory, uint256[] memory) {
+        uint256 collectionCount = collections.length;
+
+        string[] memory names = new string[](collectionCount);
+        address[] memory addresses = new address[](collectionCount);
+        uint256[] memory cardCounts = new uint256[](collectionCount);
+
+        for (uint256 i = 0; i < collectionCount; i++) {
+            names[i] = collections[i].name;
+            addresses[i] = collections[i].collectionAddress;
+            cardCounts[i] = collections[i].cardCount;
+        }
+
+        return (names, addresses, cardCounts);
+    }
+
     // Boosters
 
 }

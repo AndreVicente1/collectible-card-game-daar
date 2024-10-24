@@ -1,9 +1,17 @@
 const express = require('express');
 const HearthstoneSet = require('../models/HearthstoneSet');
 const HearthstoneCard = require('../models/HearthstoneCard');
-const {createCollection} = require('../hearthstoneAPI');
+const { ethers } = require('ethers');
 
 const router = express.Router();
+
+const contract = require('../../../contracts/artifacts/src/Main.sol/Main.json');
+
+const provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
+const wallet = new ethers.Wallet(process.env.ADDRESSE_ADMIN, provider);
+
+const mainContract = new ethers.Contract(process.env.ADDRESSE_CONTRAT, contract.abi, wallet);
+
 
 // get all sets
 router.get('/sets', async (req, res) => {
@@ -107,6 +115,68 @@ router.get('/cards/name/:name', async (req, res) => {
   }
 });
 
-router.post('/create-collections', createCollection);
+
+/*-----------------------------------------------------------*/
+
+
+router.post('/create-collections', async (req, res) => {
+  try {
+    console.log('and cards...');
+    
+    let nonce = await provider.getTransactionCount(wallet.address, "latest");
+    const allSets = await HearthstoneSet.find({});
+    for (const set of allSets) {
+        const exists = await mainContract.collectionExists(set.name);
+        if (exists) {
+            //console.log(`La collection ${set.name} existe déjà sur la blockchain. Elle ne sera pas recréée.`);
+            continue;
+        }
+
+        // que 5 cartes par collections, sinon ca bug!
+        const cards = await HearthstoneCard.find({ set: set.name }).limit(5);
+        const cardsForContract = cards.map((card, index) => ({
+            cardNumber: card.id,
+            cardName: card.name,
+            metadataURI: card.image,
+        }));
+
+        const gasEstimate = await mainContract.estimateGas.createCollection(set.name, cardsForContract.length, cardsForContract);
+        //console.log(`Gas estimé : ${gasEstimate.toString()}`);
+
+        // Créer la collection sur la blockchain
+
+        const tx = await mainContract.createCollection(set.name, cardsForContract.length, cardsForContract, {
+            gasLimit: gasEstimate.mul(2),
+            nonce: nonce
+        });
+        const receipt = await tx.wait();
+
+        //console.log(`Collection ${set.name} créée avec succès. Transaction hash: ${receipt.transactionHash}`);
+        nonce++;
+    }
+
+    res.json({ message: 'Collections créées avec succès sur la blockchain' });
+  } catch (err) {
+      console.error('Erreur lors de la création des collections et des cartes: ');
+      res.status(500).json({ error: 'Erreur lors de la création des collections et des cartes' });
+  }
+});
+
+router.get('/get-collections', async (req, res) => {
+  try {
+    console.log('Fetching collections from the blockchain');
+    const [names, addresses, cardCounts] = await mainContract.getCollections();
+
+    const collections = names.map((name, index) => ({
+      name,
+      address: addresses[index],
+      cardCount: cardCounts[index].toNumber()
+    }));
+    res.json({ collections });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des collections:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des collections' });
+  }
+});
 
 module.exports = router;
