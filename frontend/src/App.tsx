@@ -1,6 +1,6 @@
 // src/App.tsx
 import { useEffect, useMemo, useRef, useState } from 'react'
-import styles from './styles.module.css'
+import styles from './css/App.module.css'
 import * as ethereum from '@/lib/ethereum'
 import * as main from '@/lib/main'
 import { ethers, BigNumber } from 'ethers'
@@ -8,8 +8,12 @@ import collectionAbi from '@/abis/Collection.json'
 import mainAbi from '@/abis/Main.json'
 import axios from 'axios'
 import Card from './components/Card'
-import './css/App.css'
-import React from 'react'
+import HomePage from './components/HomePage';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Sidebar from './components/Sidebar'
+import AdminPage from './components/AdminPage'
+import SetsPage from './components/SetsPage';
+import SetsPageCards from './components/SetsPageCards'
 
 
 interface CardAPI {
@@ -33,6 +37,10 @@ interface CardAPI {
   updatedAt: string;
 }
 
+interface Set {
+  name: string;
+  collectibleCount: number;
+}
 
 type Canceler = () => void
 
@@ -83,7 +91,9 @@ export const App = () => {
 
   const [collectionsAPI, setCollectionsAPI] = useState<any[]>([])
   const [cardsAPI, setCardsAPI] = useState<CardAPI[]>([])
-  const [loading, setLoading] = useState<boolean>(true);
+  //const [loading, setLoading] = useState<boolean>(true);
+  const [loadingCount, setLoadingCount] = useState<number>(0);
+  const stopLoading = () => setLoadingCount(prev => Math.max(prev - 1, 0));
   const [error, setError] = useState<string | null>(null);
 
 
@@ -181,9 +191,12 @@ export const App = () => {
         }
       }
 
+      console.log('nfts fetched nice');
       setNfts(allNFTs)
     } catch (error) {
       console.error('Error fetching NFTs:', error)
+    } finally {
+      stopLoading();
     }
   }
 
@@ -234,27 +247,30 @@ export const App = () => {
       try {
         const response = await axios.get('http://localhost:5000/hearthstone/cards');
         setCardsAPI(response.data.cards);
-        setLoading(false);
+        console.log('Cards fetched:', response.data.cards);
+        //setLoading(false);
       } catch (err: any) {
         console.error('Error fetching cards:', err);
         setError(err.response?.data?.message || 'Error fetching cards');
-        setLoading(false);
+        //setLoading(false);
       }
     }
 
-    fetchCards().catch(console.error);
+    const fetchData = async () => {
+      try {
+        await Promise.all([fetchNFTs(), fetchCollections()]);
+        //await createCollectionsAPI();
+        //setLoading(false);
+      } catch (err) {
+        console.error(err);
+        setError('Erreur lors du chargement des données.');
+        //setLoading(false);
+      }
+    };
 
-    fetchNFTs().catch(console.error)
-    fetchCollections().catch(console.error)
+    fetchData().catch(console.error);
+
   }, [wallet, refreshData])
-
-  if (loading) {
-    return <div className="loading">Chargement des cartes...</div>;
-  }
-
-  if (error) {
-    return <div className="error">Erreur: {error}</div>;
-  }
 
   // Function to create a new collection
   const createCollection = async (name: string, cardCount: number) => {
@@ -292,7 +308,7 @@ export const App = () => {
   const [imageFile, setImageFile] = useState<File | null>(null)
 
   // Function to mint a card for a user
-  const mintCard = async (collectionId: number, toAddress: string, cardNumber: number) => {
+  const mintCard = async (collectionId: number, toAddress: string, cardName: string) => {
     if (!wallet) {
       alert('Wallet not connected.');
       return;
@@ -301,149 +317,105 @@ export const App = () => {
       alert('Invalid recipient address.');
       return;
     }
-    if (!imageFile) {
-      alert('Please upload an image.');
-      return;
-    }
-    
+  
     const { contract } = wallet;
-
+  
     try {
-      // Step 1: Upload the image and get metadata URI
-      const formData = new FormData();
-      formData.append('image', imageFile);
-
-      const uploadResponse = await axios.post('http://localhost:5000/images', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      const { metadataURI } = uploadResponse.data;
-      console.log('Metadata URI:', metadataURI);
-
-      // Step 2: Fetch metadata to get image URI from the metadata
-      const metadataResponse = await axios.get(metadataURI);
-      const imageURI = metadataResponse.data.image;
-      console.log('Image URI:', imageURI);
-
-      // Step 3: Mint the card using the imageURI
-      const tx = await contract.mintCard(collectionId, toAddress, cardNumber, imageURI);
+      // Récupérer les métadonnées de la carte depuis l'API via le nom
+      const response = await axios.get(`http://localhost:5000/hearthstone/cards/name/${encodeURIComponent(cardName)}`);
+      const card = response.data.card;
+  
+      if (!card) {
+        alert('Carte non trouvée dans la base de données.');
+        return;
+      }
+  
+      // Construire le metadataURI en utilisant l'API existante
+      const metadataURI = `http://localhost:5000/hearthstone/cards/${card.id}`;
+  
+      // Mint la carte en utilisant le metadataURI
+      const tx = await contract.mintCard(collectionId, toAddress, card.id, metadataURI);
       const receipt = await tx.wait();
       console.log('Transaction receipt:', receipt);
       alert('Card minted successfully');
-      
-      setRefreshData(prev => !prev);
+  
+      // Rafraîchir les données
+      setRefreshData((prev) => !prev);
       await fetchNFTs();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error minting card:', error);
       alert('Error minting card.');
     }
   };
 
-  const [collectionName, setCollectionName] = useState('')
-  const [cardCount, setCardCount] = useState(0)
+  const loading = loadingCount > 0;
 
-  const [collectionId, setCollectionId] = useState(0)
-  const [recipientAddress, setRecipientAddress] = useState('')
-  const [cardNumber, setCardNumber] = useState(0)
+  const createCollectionsAPI = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/hearthstone/sets')
+      const apiSets: Set[] = response.data.sets
+
+      // Récupérer les collections existantes sur la blockchain
+      const existingCollections = collections.map(col => col.name.toLowerCase())
+
+      // Filtrer les sets qui n'ont pas encore été créés comme collections
+      const setsToCreate = apiSets.filter(set => !existingCollections.includes(set.name.toLowerCase()))
+
+      // Créer les collections manquantes
+      for (const set of setsToCreate) {
+        await createCollection(set.name, set.collectibleCount)
+      }
+
+      if (setsToCreate.length === 0) {
+        console.log('Toutes les collections de l\'API sont déjà créées sur la blockchain')
+      } else {
+        console.log(`Créé ${setsToCreate.length} nouvelles collections depuis l'API`)
+      }
+      
+    } catch (error: any) {
+      console.error('Error synchronizing collections with API:', error)
+      setError('Erreur lors de la synchronisation des collections avec l\'API.')
+    }
+  }
 
   return (
-    <div className={styles.body}>
-      <h1>Bienvenue dans votre TCG</h1>
-      {!wallet ? (
-        <p>Connexion au portefeuille en cours...</p>
-      ) : (
-        <div>
-          <h2>Vos NFTs</h2>
-          <div className={styles.grid}>
-            {nfts.map((nft, index) => (
-              <div key={index} className={styles.cell}>
-                <h3>{nft.collectionName}</h3>
-                <p>ID du Token: {nft.tokenId}</p>
-                {nft.metadata.image && (
-                  <img src={nft.metadata.image} alt={nft.metadata.name} />
-                )}
-                <p>{nft.metadata.name}</p>
-              </div>
-            ))}
-          </div>
+    <div className={styles.appContainer}>
+      {/* Sidebar */}
+      <Sidebar isOwner={isOwner} />
 
-          <h2>All Collections</h2>
-          <ul>
-            {collections.map((col) => (
-              <li key={col.id}>
-                {col.name} - {col.cardCount} cards - ID: {col.id} - Address: {col.collectionAddress}
-              </li>
-            ))}
-          </ul>
-
-          <div className="app">
-            <h1>Liste des Cartes Hearthstone</h1>
-            <div className="cards-container">
-              {cardsAPI.map((card) => (
-                <Card key={card.id} card={card} />
-              ))}
-            </div>
-          </div>
-
-        </div>
-        
-      )}
-      
-
-      {wallet && isOwner && (
-        <>
-          <div>
-            <h2>Wallet Balance</h2>
-            <p>{balance} ETH</p>
-            <h2>Create a New Collection</h2>
-            <input
-              type="text"
-              placeholder="Collection Name"
-              value={collectionName}
-              onChange={(e) => setCollectionName(e.target.value)}
+      {/* Contenu Principal */}
+      <div className={styles.mainContent}>
+        {!wallet ? (
+          <p>Connexion au portefeuille en cours...</p>
+        ) : (
+          <Routes>
+            <Route
+              path="/"
+              element={<HomePage nfts={nfts} balance={balance} loading={loading} error={error} />}
             />
-            <input
-              type="number"
-              placeholder="Card Count"
-              value={cardCount}
-              onChange={(e) => setCardCount(Number(e.target.value))}
+
+            <Route
+              path="/sets"
+              element={<SetsPage />}
             />
-            <button onClick={() => createCollection(collectionName, cardCount)}>Create Collection</button>
-          </div>
-          <div>
-                <h2>Mint a New Card</h2>
-                <input
-                  type="number"
-                  placeholder="Collection ID"
-                  value={collectionId}
-                  onChange={(e) => setCollectionId(Number(e.target.value))}
-                />
-                <input
-                  type="text"
-                  placeholder="User Address"
-                  value={recipientAddress}
-                  onChange={(e) => setRecipientAddress(e.target.value)}
-                />
-                <input
-                  type="number"
-                  placeholder="Card Number"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(Number(e.target.value))}
-                />
-                {/* File input for image upload */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
-                />
-                <button onClick={() => mintCard(collectionId, recipientAddress, cardNumber)}>
-                  Mint Card
-                </button>
-              </div>
-        </>
-      )}
+            <Route
+              path="/sets/:slug"
+              element={<SetsPageCards />}
+            />
+
+            <Route
+              path="/admin"
+              element={
+                isOwner ? (
+                  <AdminPage createCollection={createCollection} mintCard={mintCard} />
+                ) : (
+                  <p>Accès refusé. Vous n'êtes pas le propriétaire.</p>
+                )
+              }
+            />
+          </Routes>
+        )}
+      </div>
     </div>
   )
 }

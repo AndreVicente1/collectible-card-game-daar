@@ -174,9 +174,9 @@ const mapCardTypeIdToType = (cardTypeId) => {
 const mapRarityIdToRarity = (rarityId) => {
     const rarityMap = {
         1: 'COMMON',
-        2: 'RARE',
-        3: 'EPIC',
-        4: 'LEGENDARY',
+        3: 'RARE',
+        4: 'EPIC',
+        5: 'LEGENDARY',
     };
     return rarityMap[rarityId] || 'UNKNOWN';
 };

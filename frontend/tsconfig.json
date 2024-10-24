@@ -23,5 +23,5 @@
       "$/*": ["../typechain/*"]
     }
   },
-  "include": ["./test", "./src"]
+  "include": ["./test", "./src", "../public/images"]
 }

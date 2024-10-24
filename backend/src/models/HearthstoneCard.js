@@ -8,6 +8,7 @@ const HearthstoneCardSchema = new mongoose.Schema({
   rarity: { type: String, required: true },
   description: { type: String },
   image: { type: String },
+  pinataHash: String,
   attributes: [
     {
       trait_type: { type: String },
