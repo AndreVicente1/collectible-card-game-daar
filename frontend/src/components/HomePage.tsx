@@ -27,72 +27,90 @@ interface Collection {
 }
 
 const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, error }) => {
+  // États pour la synchronisation
   const [syncing, setSyncing] = useState<boolean>(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean>(false);
-  const [syncError, setSyncError] = useState<boolean | null>(null);
-  const [hasSynced, setHasSynced] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  // États pour les collections
   const [collections, setCollections] = useState<Collection[]>([]);
   const [collectionsLoading, setCollectionsLoading] = useState<boolean>(true);
   const [collectionsError, setCollectionsError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<number>(10);
 
+
+  const [hasSynced, setHasSynced] = useState<boolean>(false);
+
+  // Fonction pour gérer la synchronisation des collections
   const handleSyncCollections = async () => {
     setSyncing(true);
     setSyncSuccess(false);
-    setSyncError(false);
-  
+    setSyncError(null);
+
     try {
-  
       const response = await axios.post('http://localhost:5000/hearthstone/create-collections');
-      
-      console.log(response.data);
-      setHasSynced(true);
+      console.log('Réponse de la synchronisation:', response.data);
       setSyncSuccess(true);
+      setHasSynced(true); 
+      setCountdown(null); 
     } catch (err: any) {
       console.error('Erreur lors de la synchronisation:', err);
-      setSyncError(true);
-      setCountdown(10);
+      setSyncError('Erreur lors de la synchronisation avec la blockchain');
+      setCountdown(10); 
     } finally {
       setSyncing(false);
     }
   };
 
+  // Fonction pour récupérer les collections depuis le backend
   const fetchCollections = async () => {
     try {
-        setCollectionsLoading(true);
-        const response = await axios.get('http://localhost:5000/hearthstone/get-collections'); // Requête au backend
-        const { collections } = response.data;
-        setCollections(collections);
+      setCollectionsLoading(true);
+      const response = await axios.get('http://localhost:5000/hearthstone/get-collections'); // Requête au backend
+      const { collections } = response.data;
+      setCollections(collections);
     } catch (err: any) {
       console.error('Erreur lors de la récupération des collections:', err);
       setCollectionsError('Erreur lors de la récupération des collections.');
     } finally {
       setCollectionsLoading(false);
     }
-  }
+  };
+
+
+  useEffect(() => {
+    if (isOwner && countdown === null && !syncing && !hasSynced) {
+      setCountdown(3); 
+    }
+  }, [isOwner, countdown, syncing, hasSynced]);
+
   
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-
+    if (countdown === null) return; 
     if (countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer); 
     } else {
-      handleSyncCollections();
+      handleSyncCollections(); 
     }
+  }, [countdown]);
 
-    return () => clearTimeout(timer);
-  }, [hasSynced, countdown]);
 
   useEffect(() => {
-    if (isOwner) {
-      setCountdown(5);
-    }
-    
     if (syncSuccess) {
       fetchCollections();
     }
-  }, [isOwner, syncSuccess]);
+  }, [syncSuccess]);
+
+  const handleManualSync = () => {
+    if (!syncing) {
+      setSyncSuccess(false);
+      setSyncError(null);
+      setHasSynced(false); 
+      setCountdown(2); 
+    }
+  };
 
   return (
     <div className={styles.homePage}>
@@ -104,19 +122,21 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
         <div className={styles.syncContainer}>
           <button
             className={styles.syncButton}
-            onClick={() => setCountdown(2)}
-            disabled={syncing || countdown > 0}
+            onClick={handleManualSync}
+            disabled={syncing || (countdown !== null && countdown > 0)}
           >
             {syncing ? 'Synchronisation en cours...' : 'Synchroniser avec la Blockchain'}
           </button>
-          {countdown > 0 && (
-            <p className={styles.countdownMessage}>Synchronisation dans: {countdown} seconde{countdown > 1 ? 's' : ''}</p>
+          {countdown !== null && countdown > 0 && (
+            <p className={styles.countdownMessage}>
+              Synchronisation dans : {countdown} seconde{countdown > 1 ? 's' : ''}
+            </p>
           )}
           {syncSuccess && <p className={styles.successMessage}>Synchronisation réussie !</p>}
           {syncError && <p className={styles.errorMessage}>{syncError}</p>}
         </div>
       )}
-      
+
       {loading ? (
         <div className={styles.loading}>Chargement de vos NFTs...</div>
       ) : error ? (
@@ -125,7 +145,11 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
         <div className={styles.nftsContainer}>
           {nfts.map((nft, index) => (
             <div key={index} className={styles.nftCard}>
-              <img src={nft.metadata.image || '/images/default.png'} alt={nft.metadata.name} className={styles.nftImage} />
+              <img
+                src={nft.metadata.image || '/images/default.png'}
+                alt={nft.metadata.name}
+                className={styles.nftImage}
+              />
               <h3>{nft.metadata.name}</h3>
               <p>Collection: {nft.collectionName}</p>
               <p>Token ID: {nft.tokenId}</p>
@@ -145,14 +169,14 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
           <ul className={styles.collectionsList}>
             {collections.map((collection, index) => (
               <li key={index} className={styles.collectionItem}>
-                <strong>{collection.name}</strong> - {collection.cardCount.toString()} cartes - {collection.address.toString()}
+                <strong>{collection.name}</strong> - {collection.cardCount} cartes - {collection.address}
               </li>
             ))}
           </ul>
         )}
       </div>
-
     </div>
-  )};
+  );
+};
 
 export default HomePage;

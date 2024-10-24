@@ -96,3 +96,10 @@ white-space: nowrap;
 text-overflow: ellipsis; 
 overflow: hidden;
 }
+
+.countdownMessage {
+    color: white; 
+    margin-top: 10px;
+    font-size: 1em;
+    font-weight: bold;
+  }
