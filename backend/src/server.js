@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const syncHearthstoneCards = require('./hearthstoneAPI');
 const hearthstoneRouter = require('./routes/hearthstone');
+const marketplaceListener = require('./listeners/marketplaceListener');
 
 const app = express();
 

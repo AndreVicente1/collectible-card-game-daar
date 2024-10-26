@@ -29,6 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOwner }) => {
             <li><Link to="/" onClick={closeSidebar}>Accueil</Link></li>
             <li><Link to="/sets" onClick={closeSidebar}>Tous les Sets</Link></li>
             <li><Link to="/booster" onClick={closeSidebar}>Boosters</Link></li>
+            <li><Link to="/marketplace" onClick={closeSidebar}>Marketplace</Link></li>
             {isOwner && (
               <li><Link to="/admin" onClick={closeSidebar}>Admin</Link></li>
             )}

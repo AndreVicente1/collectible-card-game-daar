@@ -1,18 +1,21 @@
 const express = require('express');
 const HearthstoneSet = require('../models/HearthstoneSet');
 const HearthstoneCard = require('../models/HearthstoneCard');
+const Listing = require('../models/Listing');
+
 const { ethers } = require('ethers');
 const axios = require('axios');
 
 const router = express.Router();
 
 const contract = require('../../../contracts/artifacts/src/Main.sol/Main.json');
+const MarketplaceABI = require('../../../contracts/artifacts/src/Marketplace.sol/Marketplace.json');
 
 const provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
 const wallet = new ethers.Wallet(process.env.ADDRESSE_ADMIN, provider);
 
 const mainContract = new ethers.Contract(process.env.ADDRESSE_CONTRAT, contract.abi, wallet);
-
+const marketplaceContract = new ethers.Contract(process.env.ADDRESSE_MARKETPLACE, MarketplaceABI.abi, wallet);
 
 // get all sets
 router.get('/sets', async (req, res) => {
@@ -314,5 +317,79 @@ router.post('/boosters/buyAndRedeem', async (req, res) => {
   }
 });
 
+
+// =====================================================MARKETPLACE=====================================================
+// Récupérer toutes les listes disponibles
+router.get('/listings', async (req, res) => {
+  try {
+      const listings = await Listing.find({});
+      res.json({ listings });
+  } catch (error) {
+      console.error('Erreur lors de la récupération des listes:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération des listes.' });
+  }
+});
+
+// Liste une carte pour la vente
+router.post('/list', async (req, res) => {
+  try {
+      const { nftAddress, tokenId, price } = req.body;
+
+      // Estimer le gas
+      const gasEstimate = await marketplaceContract.estimateGas.listItem(nftAddress, tokenId, ethers.utils.parseEther(price.toString()));
+      
+      // Appeler la fonction listItem
+      const tx = await marketplaceContract.listItem(nftAddress, tokenId, ethers.utils.parseEther(price.toString()), {
+          gasLimit: gasEstimate.mul(2),
+      });
+      const receipt = await tx.wait();
+
+      res.json({ message: 'Carte listée avec succès', transactionHash: receipt.transactionHash });
+  } catch (error) {
+      console.error('Erreur lors de la liste de la carte:', error);
+      res.status(500).json({ error: 'Erreur lors de la liste de la carte' });
+  }
+});
+
+// Annuler une liste
+router.post('/cancel', async (req, res) => {
+  try {
+      const { nftAddress, tokenId } = req.body;
+
+      const gasEstimate = await marketplaceContract.estimateGas.cancelListing(nftAddress, tokenId);
+      const tx = await marketplaceContract.cancelListing(nftAddress, tokenId, {
+          gasLimit: gasEstimate.mul(2),
+      });
+      const receipt = await tx.wait();
+
+      res.json({ message: 'Liste annulée avec succès', transactionHash: receipt.transactionHash });
+  } catch (error) {
+      console.error('Erreur lors de l\'annulation de la liste:', error);
+      res.status(500).json({ error: 'Erreur lors de l\'annulation de la liste' });
+  }
+});
+
+// Acheter une carte
+router.post('/buy', async (req, res) => {
+  try {
+      const { nftAddress, tokenId, price } = req.body;
+
+      const gasEstimate = await marketplaceContract.estimateGas.buyItem(nftAddress, tokenId, {
+          value: ethers.utils.parseEther(price.toString()),
+      });
+      const tx = await marketplaceContract.buyItem(nftAddress, tokenId, {
+          value: ethers.utils.parseEther(price.toString()),
+          gasLimit: gasEstimate.mul(2),
+      });
+      const receipt = await tx.wait();
+
+      res.json({ message: 'Carte achetée avec succès', transactionHash: receipt.transactionHash });
+  } catch (error) {
+      console.error('Erreur lors de l\'achat de la carte:', error);
+      res.status(500).json({ error: 'Erreur lors de l\'achat de la carte' });
+  }
+});
+
+module.exports = router;
 
 module.exports = router;

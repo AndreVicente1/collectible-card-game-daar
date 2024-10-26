@@ -1,0 +1,132 @@
+/* src/css/Marketplace.module.css */
+
+/* Conteneur principal de la marketplace */
+.marketplace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    color: #ffffff;
+    background-color: rgba(0, 0, 0, 0.8); /* Exemple de fond sombre pour contraste */
+}
+
+/* Titre principal */
+.marketplace h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+/* Sections de la marketplace */
+.listingsSection,
+.userCardsSection {
+    width: 100%;
+    max-width: 1200px;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.listingsSection h2,
+.userCardsSection h2 {
+    margin-bottom: 20px;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+/* Conteneur pour les cartes */
+.nftsContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+}
+
+/* Style individuel des cartes */
+.nftCard {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    color: #ffffff;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.nftCard:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+
+.nftImage {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+/* Boutons */
+.buyButton,
+.listButton {
+    padding: 10px 20px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 1em;
+    margin-top: 10px;
+}
+
+.buyButton:hover,
+.listButton:hover {
+    background-color: #2980b9;
+}
+
+.buyButton:disabled,
+.listButton:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
+/* Messages de chargement et d'erreur */
+.loading,
+.error {
+    color: #ffffff;
+    font-size: 1.2em;
+    margin-top: 20px;
+}
+
+/* Section de mise en vente des cartes de l'utilisateur */
+.saleContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.priceInput {
+    padding: 8px;
+    width: 80%;
+    margin-bottom: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.priceInput::placeholder {
+    color: #dddddd;
+}
+
+/* Adaptation pour le fond sombre */
+.listingsSection,
+.userCardsSection {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 20px;
+    border-radius: 10px;
+}

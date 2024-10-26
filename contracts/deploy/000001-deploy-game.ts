@@ -12,7 +12,7 @@ const deployMain: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   if (network.config.chainId !== 31337) return
 
   console.log(`Deploying Main contract with owner: ${deployer}`)
-
+  
   const mainDeployment = await deploy('Main', {
     from: deployer,
     args: [deployer], // Pass the owner address to the constructor
@@ -20,7 +20,16 @@ const deployMain: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   })
 
   console.log(`Main contract deployed at: ${mainDeployment.address}`)
+  console.log(`Deploying Marketplace contract with owner: ${deployer}`)
+  const marketplaceDeployment = await deploy('Marketplace', {
+    from: deployer,
+    args: [deployer],
+    log: true,
+  })
+  console.log(`Marketplace contract deployed at: ${marketplaceDeployment.address}`)
+  const marketplace = await deployments.get('Marketplace')
 }
 
 export default deployMain
 deployMain.tags = ['Main']
+deployMain.dependencies = ['Marketplace'] 

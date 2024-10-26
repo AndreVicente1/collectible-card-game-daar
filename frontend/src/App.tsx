@@ -15,6 +15,7 @@ import AdminPage from './components/AdminPage'
 import SetsPage from './components/SetsPage';
 import SetsPageCards from './components/SetsPageCards'
 import Booster from './components/Booster';
+import Marketplace from './components/MarketPlace'
 
 
 interface CardAPI {
@@ -306,6 +307,10 @@ export const App = () => {
             <Route
               path="/booster"
               element={<Booster />}
+            />
+            <Route
+              path="/marketplace"
+              element={<Marketplace userAddress={wallet?.details.account || ''} userNfts={nfts} />} 
             />
 
             <Route
