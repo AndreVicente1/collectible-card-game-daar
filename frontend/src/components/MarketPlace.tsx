@@ -18,7 +18,7 @@ interface Listing {
 
 interface MarketplaceProps {
   userAddress: string;
-  userNfts: any[]; // Vous pouvez définir un type plus précis si nécessaire
+  userNfts: any[];
 }
 
 const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts }) => {
@@ -89,12 +89,16 @@ const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts }) => {
       alert('Veuillez entrer un prix valide.');
       return;
     }
-
+  
+    console.log('Listing NFT:', { nftAddress, tokenId, price });
+  
     try {
+      const priceInWei = ethers.utils.parseEther(price); // Convertir en Wei ici
+  
       const tx = await axios.post('http://localhost:5000/hearthstone/list', {
         nftAddress,
         tokenId,
-        price: ethers.utils.parseEther(price).toString(),
+        price: priceInWei.toString(), // Envoyer le prix en Wei
       });
       alert('Carte listée avec succès! Transaction Hash: ' + tx.data.transactionHash);
       // Rafraîchir les listes
@@ -106,15 +110,20 @@ const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts }) => {
       alert('Erreur lors de la liste de la carte.');
     }
   };
+  
 
-  // Utiliser les NFTs passés en prop pour lister les cartes de l'utilisateur
-  const userCards = userNfts.map((nft: any) => ({
-    nftAddress: nft.collectionAddress,
-    tokenId: nft.tokenId,
-    price: '',
-    seller: userAddress,
-    metadata: nft.metadata, // Assurez-vous que le metadata est présent
-  }));
+  const userCards = userNfts.map((nft: any) => {
+    console.log('Mapping NFT:', nft); // Ajout de log pour débogage
+    return {
+      nftAddress: nft.collectionAddress, // Utilisation de collectionAddress
+      tokenId: nft.tokenId,
+      price: '',
+      seller: userAddress,
+      metadata: nft.metadata, 
+    };
+  });
+  console.log('User Cards:', userCards);
+  
 
   const handlePriceChange = (nftAddress: string, tokenId: number, value: string) => {
     setSalePrices(prev => ({ ...prev, [`${nftAddress}-${tokenId}`]: value }));

@@ -335,21 +335,37 @@ router.post('/list', async (req, res) => {
   try {
       const { nftAddress, tokenId, price } = req.body;
 
-      // Estimer le gas
-      const gasEstimate = await marketplaceContract.estimateGas.listItem(nftAddress, tokenId, ethers.utils.parseEther(price.toString()));
+      console.log('Received list request:', { nftAddress, tokenId, price });
+
+      // Validation des paramètres
+      if (!nftAddress || !ethers.utils.isAddress(nftAddress)) {
+          console.log('Invalid NFT address:', nftAddress);
+          return res.status(400).json({ error: 'Adresse NFT invalide ou manquante.' });
+      }
+      if (tokenId === undefined || tokenId === null || typeof tokenId !== 'number') {
+          return res.status(400).json({ error: 'Token ID invalide ou manquant.' });
+      }
+      if (!price || isNaN(price)) {
+          return res.status(400).json({ error: 'Prix invalide ou manquant.' });
+      }
+
+      // Conversion correcte du prix (éviter la double conversion)
+      const priceInWei = ethers.BigNumber.from(price);
       
       // Appeler la fonction listItem
-      const tx = await marketplaceContract.listItem(nftAddress, tokenId, ethers.utils.parseEther(price.toString()), {
-          gasLimit: gasEstimate.mul(2),
+      const tx = await marketplaceContract.listItem(nftAddress, tokenId, priceInWei, {
+          gasLimit: 1000000,
       });
       const receipt = await tx.wait();
 
       res.json({ message: 'Carte listée avec succès', transactionHash: receipt.transactionHash });
   } catch (error) {
       console.error('Erreur lors de la liste de la carte:', error);
-      res.status(500).json({ error: 'Erreur lors de la liste de la carte' });
+      res.status(500).json({ error: 'Erreur lors de la liste de la carte.' });
   }
 });
+
+
 
 // Annuler une liste
 router.post('/cancel', async (req, res) => {

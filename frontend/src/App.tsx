@@ -149,7 +149,7 @@ export const App = () => {
     await checkOwner();
   
     try {
-      const collectionCountBN: BigNumber = await contract.getCollectionCount();
+      const collectionCountBN = await contract.getCollectionCount();
       const collectionCount = collectionCountBN.toNumber();
   
       console.log("Number of collections:", collectionCount);
@@ -161,7 +161,7 @@ export const App = () => {
         const collectionContract = new ethers.Contract(collectionAddress.toString(), collectionAbi, provider);
   
         // Récupérer le nombre total de tokens dans cette collection
-        const nextTokenIdBN: BigNumber = await collectionContract.nextTokenId();
+        const nextTokenIdBN = await collectionContract.nextTokenId();
         const nextTokenId = nextTokenIdBN.toNumber();
   
         for (let tokenId = 0; tokenId < nextTokenId; tokenId++) {
@@ -177,6 +177,7 @@ export const App = () => {
                 collectionName,
                 tokenId,
                 metadata,
+                collectionAddress, // Inclusion de l'adresse de la collection
               });
   
               console.log(`Le token ID ${tokenId} vous appartient dans la collection ${collectionName}.`);
@@ -195,6 +196,7 @@ export const App = () => {
       stopLoading();
     }
   };
+  
 
   const isValidAddress = (address: string) => {
     try {
