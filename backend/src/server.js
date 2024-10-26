@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/hearthstone', hearthstoneRouter); // Nouvelle route pour les sets
+app.use('/hearthstone', hearthstoneRouter);
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
