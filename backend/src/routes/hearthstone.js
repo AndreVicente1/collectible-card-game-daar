@@ -2,6 +2,7 @@ const express = require('express');
 const HearthstoneSet = require('../models/HearthstoneSet');
 const HearthstoneCard = require('../models/HearthstoneCard');
 const { ethers } = require('ethers');
+const axios = require('axios');
 
 const router = express.Router();
 
@@ -138,6 +139,7 @@ router.post('/create-collections', async (req, res) => {
             cardNumber: card.id,
             cardName: card.name,
             metadataURI: card.image,
+            collectionAddress: ethers.constants.AddressZero,
         }));
 
         const gasEstimate = await mainContract.estimateGas.createCollection(set.name, cardsForContract.length, cardsForContract);
@@ -146,7 +148,7 @@ router.post('/create-collections', async (req, res) => {
         // Créer la collection sur la blockchain
 
         const tx = await mainContract.createCollection(set.name, cardsForContract.length, cardsForContract, {
-            gasLimit: gasEstimate.mul(2),
+            //gasLimit: gasEstimate.mul(2),
             nonce: nonce
         });
         const receipt = await tx.wait();
@@ -165,18 +167,152 @@ router.post('/create-collections', async (req, res) => {
 router.get('/get-collections', async (req, res) => {
   try {
     console.log('Fetching collections from the blockchain');
-    const [names, addresses, cardCounts] = await mainContract.getCollections();
+    const collectionCount = await mainContract.getCollectionCount();
+    const collections = [];
 
-    const collections = names.map((name, index) => ({
-      name,
-      address: addresses[index],
-      cardCount: cardCounts[index].toNumber()
-    }));
+    for (let i = 0; i < collectionCount.toNumber(); i++) {
+      const [name, address, cardCount] = await mainContract.getCollectionInfo(i);
+      collections.push({
+        name,
+        address,
+        cardCount: cardCount.toNumber(),
+      });
+    }
+
     res.json({ collections });
   } catch (error) {
     console.error('Erreur lors de la récupération des collections:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des collections' });
   }
 });
+
+router.post('/mint', async (req, res) => {
+  try {
+    const { collectionAddress, toAddress, cardNumber, cardName, metadataURI } = req.body;
+
+      // param
+      if (!collectionAddress || !ethers.utils.isAddress(collectionAddress)) {
+          return res.status(400).json({ error: 'Adresse de collection invalide ou manquante' });
+      }
+      if (!toAddress || !ethers.utils.isAddress(toAddress)) {
+          return res.status(400).json({ error: 'Adresse du destinataire invalide ou manquante' });
+      }
+      if (cardNumber === undefined || cardNumber === null || typeof cardNumber !== 'number') {
+          return res.status(400).json({ error: 'Numéro de carte invalide ou manquant' });
+      }
+      if (!cardName || typeof cardName !== 'string') {
+        return res.status(400).json({ error: 'Nom de la carte invalide ou manquante' });
+    }
+      if (!metadataURI || typeof metadataURI !== 'string') {
+          return res.status(400).json({ error: 'Image URL invalide ou manquante' });
+      }
+
+      // verifier que la collection existe dans la blockchain
+      const [names, addresses, cardCounts] = await mainContract.getCollections();
+
+      let collectionId = null;
+        for (let i = 0; i < addresses.length; i++) {
+            if (addresses[i].toLowerCase() === collectionAddress.toLowerCase()) {
+                collectionId = i;
+                break;
+            }
+        }
+
+      if (collectionId === null) {
+          return res.status(404).json({ error: 'Collection non trouvée sur la blockchain.' });
+      }
+
+      const tx = await mainContract.mintCard(
+          collectionAddress,
+          toAddress,
+          cardNumber,
+          cardName,
+          metadataURI,
+      );
+      
+      const receipt = await tx.wait();
+
+      console.log(`Carte mintée avec succès dans la collection ${collectionAddress}. Transaction hash: ${receipt.transactionHash}`);
+
+      res.json({ message: 'Carte mintée avec succès sur la blockchain.', transactionHash: receipt.transactionHash });
+  } catch (err) {
+      console.error('Erreur lors du minting de la carte:', err);
+      res.status(500).json({ error: 'Erreur lors du minting de la carte.' });
+  }
+});
+
+// get boosters pour les afficher
+router.get('/boosters', async (req, res) => {
+  try {
+    const setsResponse = await axios.get(`http://localhost:5000/hearthstone/sets`);
+    const sets = setsResponse.data.sets;
+
+    const boosters = sets.map((set, index) => ({
+      name: set.name, // le nom du set est le nom du booster
+      boosterTypeId: index,
+    }));
+
+    res.json({ boosters });
+  } catch (error) {
+    console.error("Erreur lors de la création des boosters:", error);
+    res.status(500).json({ error: "Erreur lors de la création des boosters." });
+  }
+});
+
+router.post('/boosters/buyAndRedeem', async (req, res) => {
+  try {
+    const { boosterName, boosterTypeId } = req.body;
+
+    console.log('Achat et rédemption du booster avec le nom:', boosterName);
+    // Buy the booster
+    const collectionId = await mainContract.getCollectionIdByName(boosterName);
+    console.log('Collection ID récup:', collectionId.toString());
+
+    const buyTx = await mainContract.createBooster(boosterName, collectionId, boosterTypeId,
+      { value: ethers.utils.parseEther("0.05"),
+      });
+    const buyReceipt = await buyTx.wait();
+    console.log('Booster acheté avec succès. Transaction hash:', buyReceipt.transactionHash);
+    // Retrieve the latest booster ID from the events in the receipt
+    const boosterMintedEvent = buyReceipt.events.find(event => event.event === 'BoosterMinted');
+    const boosterId = boosterMintedEvent.args.boosterId;
+    console.log('Booster ID récup:', boosterId.toString());
+
+    // Redeem the booster
+    const redeemTx = await mainContract.openBooster(boosterId, { gasLimit: 2000000 });
+    const redeemReceipt = await redeemTx.wait();
+    console.log('Booster open: Transaction hash:', redeemTx.hash);
+
+    // Extract redeemed cards from the BoosterRedeemed event
+    const boosterOpenedEvent = redeemReceipt.events.find(event => event.event === 'BoosterOpened');
+    if (!boosterOpenedEvent || !boosterOpenedEvent.args) {
+      throw new Error("L'événement BoosterOpened n'a pas été trouvé");
+    }
+
+    // Extraire et combiner les informations des cartes
+    const { cardNumbers, cardNames, metadataURIS } = boosterOpenedEvent.args;
+    const redeemedCards = cardNumbers.map((cardNumber, index) => ({
+      cardNumber: cardNumber.toNumber(),
+      cardName: cardNames[index],
+      metadataURI: metadataURIS[index]
+    }));
+
+
+    console.log("Cartes récupérées:", redeemedCards);
+
+    // Respond with the redeemed cards
+    res.json({
+      success: true,
+      message: 'Booster acheté et réclamé avec succès',
+      cards: redeemedCards,
+      transactionHash: redeemTx.hash
+    });
+  
+  } catch (err) {
+    console.error("Erreur lors de l'achat et la rédemption du booster:", err);
+    res.status(500).json({ error: "Erreur lors de l'achat et la rédemption du booster" });
+  }
+});
+
 
 module.exports = router;

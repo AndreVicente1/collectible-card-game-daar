@@ -9,15 +9,15 @@ contract Collection is ERC721URIStorage, Ownable {
         uint256 cardNumber;
         string cardName;
         string metadataURI;
+        address collectionAddress;
     }
 
     string public collectionName;
-    uint256 public cardCount; // The total number of cards in the collection
+    uint256 public cardCount;
     uint256 public nextTokenId;
 
     mapping(uint256 => Card) public cards; // Mapping tokenId to the card details
 
-    // TODO: changer le nom
     constructor(string memory _name, uint256 _cardCount, Card[] memory _cards) 
       ERC721(_name, "NFTC") 
       Ownable(msg.sender)
@@ -26,13 +26,17 @@ contract Collection is ERC721URIStorage, Ownable {
         cardCount = _cardCount;
 
         for (uint256 i =0; i < _cards.length; i++) {
-            cards[i] = _cards[i];
+            cards[i] = Card({
+                cardNumber: _cards[i].cardNumber,
+                cardName: _cards[i].cardName,
+                metadataURI: _cards[i].metadataURI,
+                collectionAddress: address(this)
+            });
         }
     }
 
     // Mint a new card (NFT) with a card number and image URI
     function mint(address _to, uint256 _cardNumber, string memory _cardName, string memory _metadataURI) external onlyOwner {
-        require(nextTokenId < uint256(cardCount), "Card limit reached for this collection");
 
         uint256 tokenId = nextTokenId;
         nextTokenId++;
@@ -44,7 +48,8 @@ contract Collection is ERC721URIStorage, Ownable {
         cards[tokenId] = Card({
             cardNumber: _cardNumber,
             cardName: _cardName,
-            metadataURI: _metadataURI
+            metadataURI: _metadataURI,
+            collectionAddress: address(this)
         });
 
         _setTokenURI(tokenId, _metadataURI);

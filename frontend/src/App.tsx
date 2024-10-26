@@ -14,6 +14,7 @@ import Sidebar from './components/Sidebar'
 import AdminPage from './components/AdminPage'
 import SetsPage from './components/SetsPage';
 import SetsPageCards from './components/SetsPageCards'
+import Booster from './components/Booster';
 
 
 interface CardAPI {
@@ -109,97 +110,90 @@ export const App = () => {
     }
   }
 
-  const fetchNFTs = async () => {
-    
-    if (!wallet) return
-    const { details, contract } = wallet
-    const { account, provider } = details
-
-    if (account) {
-      await fetchAndLogBalance(provider, account)
-    }
-    
-    const checkOwner = async () => {
-      try {
-        const ownerAddress = await contract.owner()
-        console.log('Owner address of Main contract:', ownerAddress)
-        console.log('Connected account:', account)
-
-        //debug
-        if (contract) {
-          console.log('Contract functions:', Object.keys(contract.functions));
-        }
-
-        if (account) {
-          setIsOwner(account.toLowerCase() === ownerAddress.toLowerCase())
-        }
-      } catch (error) {
-        console.error('Error fetching owner:', error)
-      }
-    }
-
-    await checkOwner()
-
+  const checkOwner = async () => {
+    if (!wallet) return;
+    const { details, contract } = wallet;
+    const { account, provider } = details;
     try {
-      // Fetch the number of collections
-      const collectionCountBN: BigNumber = await contract.getCollectionCount()
-      const collectionCount = collectionCountBN.toNumber()
+      const ownerAddress = await contract.owner();
+      console.log("Owner address of Main contract:", ownerAddress);
+      console.log("Connected account:", account);
 
-      console.log('Number of collections:', collectionCount)
-      console.log('Fetching all NFTs...')
-      const allNFTs = []
+      if (account) {
+        setIsOwner(account.toLowerCase() === ownerAddress.toLowerCase());
+      }
+    } catch (error) {
+      console.error("Error fetching owner:", error);
+    }
+  };
 
+  async function fetchTokenMetadata(tokenURI: string): Promise<any | null> {
+    try {
+      return { image: tokenURI };
+    } catch (error) {
+      console.error(`Erreur lors de la récupération des métadonnées pour ${tokenURI}`, error);
+      return null;
+    }
+  }
+  
+  const fetchNFTs = async () => {
+    if (!wallet) return;
+    const { details, contract } = wallet;
+    const { account, provider } = details;
+  
+    if (account) {
+      await fetchAndLogBalance(provider, account);
+    }
+  
+    await checkOwner();
+  
+    try {
+      const collectionCountBN: BigNumber = await contract.getCollectionCount();
+      const collectionCount = collectionCountBN.toNumber();
+  
+      console.log("Number of collections:", collectionCount);
+      console.log("Fetching all NFTs...");
+      const allNFTs = [];
+  
       for (let i = 0; i < collectionCount; i++) {
-        const [collectionName, , collectionAddress] = await contract.getCollection(i)
-        const collectionContract = new ethers.Contract(collectionAddress, collectionAbi, provider)
-
-        // Fetch the total number of tokens minted in this collection
-        const nextTokenIdBN: BigNumber = await collectionContract.nextTokenId()
-        const nextTokenId = nextTokenIdBN.toNumber()
-
-        // Iterate through all token IDs and check ownership
+        const [collectionName, collectionAddress, cardCount] = await contract.getCollectionInfo(i);
+        const collectionContract = new ethers.Contract(collectionAddress.toString(), collectionAbi, provider);
+  
+        // Récupérer le nombre total de tokens dans cette collection
+        const nextTokenIdBN: BigNumber = await collectionContract.nextTokenId();
+        const nextTokenId = nextTokenIdBN.toNumber();
+  
         for (let tokenId = 0; tokenId < nextTokenId; tokenId++) {
           try {
-              console.log(`Fetching token ID ${tokenId} in collection ${collectionName}...`)
-              const ownerOf = await collectionContract.ownerOf(tokenId)
-              var tokenURI = '';
-              if (account && ownerOf.toLowerCase() === account.toLowerCase()) {
-                tokenURI = await collectionContract.tokenURI(tokenId)
-              }
-              // Fetch metadata from tokenURI
-              const response = await fetch(tokenURI)
-              const metadata = await response.json()
-              console.log('Metadata:', metadata)
-              console.log('Image:', metadata.image)
+            const ownerOf = await collectionContract.ownerOf(tokenId);
+  
+            if (account && ownerOf.toLowerCase() === account.toLowerCase()) {
+              const tokenURI = await collectionContract.tokenURI(tokenId);
+              const metadata = { image: tokenURI };
+  
               allNFTs.push({
                 collectionId: i,
                 collectionName,
                 tokenId,
                 metadata,
-              })
-            
-              if (!account) return;
-              // Afficher si le token appartient à l'utilisateur connecté
-              if (ownerOf.toLowerCase() === account.toLowerCase()) {
-                console.log(`Le token ID ${tokenId} vous appartient.`)
-              } else {
-                console.log(`Le token ID ${tokenId} appartient à l'adresse ${ownerOf}.`)
-              }
+              });
+  
+              console.log(`Le token ID ${tokenId} vous appartient dans la collection ${collectionName}.`);
+            }
           } catch (error) {
-            // Handle cases where the token might not exist or other errors
-            console.warn(`Erreur lors de la récupération du Token ID ${tokenId} dans la collection ${collectionName}:`, error)
+            console.warn(`Erreur lors de la récupération du Token ID ${tokenId} dans la collection ${collectionName}:`, error);
           }
         }
       }
-
-      console.log('nfts fetched nice');
-      setNfts(allNFTs)
+  
+      console.log("NFTs fetched successfully.");
+      setNfts(allNFTs);
     } catch (error) {
-      console.error('Error fetching NFTs:', error)
+      console.error("Error fetching NFTs:", error);
     } finally {
       stopLoading();
     }
-  }
+  };
 
   const isValidAddress = (address: string) => {
     try {
@@ -223,26 +217,13 @@ export const App = () => {
         const allCollections = []
 
         for (let i = 0; i < collectionCount; i++) {
-          const [name, cardCount, collectionAddress] = await contract.getCollection(i)
+          const [name, collectionAddress, cardCount] = await contract.getCollectionInfo(i)
           allCollections.push({ id: i, name, cardCount: cardCount.toNumber(), collectionAddress })
         }
 
         setCollections(allCollections)
       } catch (error) {
         console.error('Error fetching collections:', error)
-      }
-    }
-
-    const fetchCards = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/hearthstone/cards');
-        setCardsAPI(response.data.cards);
-        console.log('Cards fetched:', response.data.cards);
-        //setLoading(false);
-      } catch (err: any) {
-        console.error('Error fetching cards:', err);
-        setError(err.response?.data?.message || 'Error fetching cards');
-        //setLoading(false);
       }
     }
 
@@ -295,78 +276,7 @@ export const App = () => {
     }
   }
 
-  const [imageFile, setImageFile] = useState<File | null>(null)
-
-  // Function to mint a card for a user
-  const mintCard = async (collectionId: number, toAddress: string, cardName: string) => {
-    if (!wallet) {
-      alert('Wallet not connected.');
-      return;
-    }
-    if (!isValidAddress(toAddress)) {
-      alert('Invalid recipient address.');
-      return;
-    }
-  
-    const { contract } = wallet;
-  
-    try {
-      // Récupérer les métadonnées de la carte depuis l'API via le nom
-      const response = await axios.get(`http://localhost:5000/hearthstone/cards/name/${encodeURIComponent(cardName)}`);
-      const card = response.data.card;
-  
-      if (!card) {
-        alert('Carte non trouvée dans la base de données.');
-        return;
-      }
-  
-      // Construire le metadataURI en utilisant l'API existante
-      const metadataURI = `http://localhost:5000/hearthstone/cards/${card.id}`;
-  
-      // Mint la carte en utilisant le metadataURI
-      const tx = await contract.mintCard(collectionId, toAddress, card.id, card.name, metadataURI);
-      const receipt = await tx.wait();
-      console.log('Transaction receipt:', receipt);
-      alert('Card minted successfully');
-  
-      // Rafraîchir les données
-      setRefreshData((prev) => !prev);
-      await fetchNFTs();
-    } catch (error: any) {
-      console.error('Error minting card:', error);
-      alert('Error minting card.');
-    }
-  };
-
   const loading = loadingCount > 0;
-
-  const createCollectionsAPI = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/hearthstone/sets')
-      const apiSets: Set[] = response.data.sets
-
-      // Récupérer les collections existantes sur la blockchain
-      const existingCollections = collections.map(col => col.name.toLowerCase())
-
-      // Filtrer les sets qui n'ont pas encore été créés comme collections
-      const setsToCreate = apiSets.filter(set => !existingCollections.includes(set.name.toLowerCase()))
-
-      // Créer les collections manquantes
-      for (const set of setsToCreate) {
-        await createCollection(set.name, set.collectibleCount)
-      }
-
-      if (setsToCreate.length === 0) {
-        console.log('Toutes les collections de l\'API sont déjà créées sur la blockchain')
-      } else {
-        console.log(`Créé ${setsToCreate.length} nouvelles collections depuis l'API`)
-      }
-      
-    } catch (error: any) {
-      console.error('Error synchronizing collections with API:', error)
-      setError('Erreur lors de la synchronisation des collections avec l\'API.')
-    }
-  }
 
   return (
     <div className={styles.appContainer}>
@@ -381,7 +291,7 @@ export const App = () => {
           <Routes>
             <Route
               path="/"
-              element={<HomePage nfts={nfts} balance={balance} isOwner={isOwner} loading={loading} error={error} />}
+              element={<HomePage nfts={nfts} balance={balance} isOwner={isOwner} loading={loading} error={error} fetchNFTs={fetchNFTs}/>}
             />
 
             <Route
@@ -394,10 +304,15 @@ export const App = () => {
             />
 
             <Route
+              path="/booster"
+              element={<Booster />}
+            />
+
+            <Route
               path="/admin"
               element={
                 isOwner ? (
-                  <AdminPage createCollection={createCollection} mintCard={mintCard} />
+                  <AdminPage createCollection={createCollection} />
                 ) : (
                   <p>Accès refusé. Vous n'êtes pas le propriétaire.</p>
                 )

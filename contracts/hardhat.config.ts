@@ -10,7 +10,15 @@ import 'hardhat-abi-exporter'
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 const config: HardhatUserConfig = {
-  solidity: '0.8.20',
+  solidity: {
+    version: "0.8.20",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
   paths: {
     deploy: './deploy',
     sources: './src',
@@ -35,6 +43,8 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      gas: 12000000,
+      allowUnlimitedContractSize: true,
       chainId: 31337,
       // Configure custom accounts using private keys from environment variables
       accounts: [
@@ -43,13 +53,11 @@ const config: HardhatUserConfig = {
           balance: '1000000000000000000000',
         },
         {
-          privateKey: process.env.DEPLOYER_PRIVATE_KEY || '0x2051d560394E95981013E21160D0ee52EbbEF199',
+          privateKey: 'eb8f0acc1642feca8e60f64506e7ac7dd69e0a13031a8c185580265c750ae549',
           balance: '1000000000000000000000',
         },
-        // Add more accounts if needed
       ],
     },
-    // Add other networks (e.g., Ropsten, Mainnet) as needed
   },
 }
 

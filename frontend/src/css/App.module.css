@@ -13,6 +13,7 @@
 
 .mainContent {
     flex: 1;
+    text-align: center;
     padding: 20px;
     overflow-y: auto;
     position: relative;

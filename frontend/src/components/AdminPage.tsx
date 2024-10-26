@@ -4,18 +4,12 @@ import Mint from './Mint';
 
 interface AdminPageProps {
   createCollection: (name: string, cardCount: number) => void;
-  mintCard: (collectionId: number, toAddress: string, cardName: string) => void;
 }
 
-const AdminPage: React.FC<AdminPageProps> = ({ createCollection, mintCard }) => {
+const AdminPage: React.FC<AdminPageProps> = ({ createCollection}) => {
   // États pour créer une collection
   const [collectionName, setCollectionName] = useState('');
   const [cardCount, setCardCount] = useState<number>(0);
-
-  // États pour mint une carte
-  const [collectionId, setCollectionId] = useState<number>(0);
-  const [recipientAddress, setRecipientAddress] = useState('');
-  const [cardName, setcardName] = useState<number>(0);
 
   return (
     <div className={styles.adminPage}>
@@ -39,16 +33,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ createCollection, mintCard }) => 
       </div>
 
       <h2>Mint une Nouvelle Carte</h2>
-      <div className={styles.formGroup}>
-        <input
-          type="number"
-          placeholder="ID de la Collection"
-          value={collectionId}
-          onChange={(e) => setCollectionId(Number(e.target.value))}
-        />
-        {/* Intégration du Déroulable */}
-        <Mint collectionId={collectionId} mintCard={mintCard} />
-      </div>
+      <Mint />
     </div>
   );
 };

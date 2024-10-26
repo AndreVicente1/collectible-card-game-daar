@@ -1,0 +1,59 @@
+.modalOverlay {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background-color: rgba(0, 0, 0, 0.5);
+display: flex;
+justify-content: center;
+align-items: center;
+z-index: 1000;
+}
+
+.modalContent {
+background-color: white;
+padding: 20px;
+border-radius: 10px;
+width: 80%;
+max-width: 600px;
+text-align: center;
+position: relative;
+}
+
+.cardsContainer {
+display: flex;
+flex-wrap: wrap;
+justify-content: center;
+gap: 15px;
+margin-top: 20px;
+}
+
+.card {
+border: 1px solid #ccc;
+border-radius: 10px;
+padding: 10px;
+width: 100px;
+text-align: center;
+box-shadow: 1px 1px 6px rgba(0, 0, 0, 0.1);
+}
+
+.cardImage {
+width: 100%;
+height: auto;
+border-radius: 5px;
+}
+
+.closeButton {
+margin-top: 20px;
+padding: 10px 20px;
+background-color: #dc3545;
+color: white;
+border: none;
+border-radius: 5px;
+cursor: pointer;
+}
+
+.closeButton:hover {
+background-color: #c82333;
+}

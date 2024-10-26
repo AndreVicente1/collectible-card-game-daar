@@ -1,0 +1,56 @@
+.mintCardForm {
+padding: 20px;
+background-color: rgba(255, 255, 255, 0.1);
+border-radius: 10px;
+max-width: 500px;
+margin: 0 auto;
+color: #ffffff;
+}
+
+.formGroup {
+margin-bottom: 15px;
+}
+
+.formGroup label {
+display: block;
+margin-bottom: 5px;
+}
+
+.formGroup select,
+.formGroup input {
+width: 100%;
+padding: 8px;
+border: 1px solid rgba(255, 255, 255, 0.3);
+border-radius: 5px;
+background-color: rgba(255, 255, 255, 0.2);
+color: #ffffff;
+}
+
+button {
+padding: 10px 20px;
+background-color: #27ae60;
+color: white;
+border: none;
+border-radius: 5px;
+cursor: pointer;
+transition: background-color 0.3s ease;
+}
+
+button:hover {
+background-color: #1e8449;
+}
+
+button:disabled {
+background-color: #95a5a6;
+cursor: not-allowed;
+}
+
+.successMessage {
+color: #27ae60;
+margin-top: 10px;
+}
+
+.errorMessage {
+color: #e74c3c;
+margin-top: 10px;
+}

@@ -18,6 +18,7 @@ interface HomePageProps {
   isOwner: boolean;
   loading: boolean;
   error: string | null;
+  fetchNFTs: () => Promise<void>;
 }
 
 interface Collection {
@@ -26,7 +27,7 @@ interface Collection {
   cardCount: number;
 }
 
-const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, error }) => {
+const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, error, fetchNFTs }) => {
   // États pour la synchronisation
   const [syncing, setSyncing] = useState<boolean>(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean>(false);
@@ -97,16 +98,13 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
     }
   }, [countdown]);
 
-
-  useEffect(() => {
-    if (syncSuccess) {
-      fetchCollections();
-    }
-  }, [syncSuccess]);
-
   useEffect(() => {
     fetchCollections();
   }, []); // Récupère les collections au montage du composant
+
+  useEffect(() => {
+    fetchNFTs();
+  }, []);
 
   const handleManualSync = () => {
     if (!syncing) {
@@ -142,27 +140,6 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
         </div>
       )}
 
-      {loading ? (
-        <div className={styles.loading}>Chargement de vos NFTs...</div>
-      ) : error ? (
-        <div className={styles.error}>Erreur: {error}</div>
-      ) : (
-        <div className={styles.nftsContainer}>
-          {nfts.map((nft, index) => (
-            <div key={index} className={styles.nftCard}>
-              <img
-                src={nft.metadata.image || '/images/default.png'}
-                alt={nft.metadata.name}
-                className={styles.nftImage}
-              />
-              <h3>{nft.metadata.name}</h3>
-              <p>Collection: {nft.collectionName}</p>
-              <p>Token ID: {nft.tokenId}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Chargement et affichage des collections avec menu déroulant */}
       <div className={styles.collectionsContainer}>
         <h2>Collections disponibles</h2>
@@ -191,6 +168,27 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
           </div>
         )}
       </div>
+
+      <h2 className={styles.nftsTitle}>Vos NFTs</h2>
+        {loading ? (
+          <div className={styles.loading}>Chargement de vos NFTs...</div>
+        ) : error ? (
+          <div className={styles.error}>Erreur: {error}</div>
+        ) : (
+          <div className={styles.nftsContainer}>
+            {nfts.map((nft, index) => (
+              <div key={index} className={styles.nftCard}>
+                <img
+                  src={nft.metadata?.image || '/images/cards/basic.png'}
+                  className={styles.nftImage}
+                />
+                <p>Collection: {nft.collectionName}</p>
+                <p>Token ID: {nft.tokenId}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
     </div>
   );
 };

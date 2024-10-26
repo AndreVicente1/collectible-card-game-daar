@@ -35,6 +35,7 @@ const setImages: { [key: string]: string } = {
     "Showdown in the Badlands": "/images/sets/showdown-in-the-badlands.png",
     "Perils in Paradise": "/images/sets/perils-in-paradise.png",
     "Murder at Castle Nathria": "/images/sets/murder-at-castle-nathria.png",
+    "Path of Arthas": "/images/sets/path-of-arthas.png",
   };
   
   export default setImages;
