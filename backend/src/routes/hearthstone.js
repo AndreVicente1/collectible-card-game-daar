@@ -375,10 +375,8 @@ router.post('/list', async (req, res) => {
 router.post('/cancel', async (req, res) => {
   try {
       const { nftAddress, tokenId } = req.body;
-
-      const gasEstimate = await marketplaceContract.estimateGas.cancelListing(nftAddress, tokenId);
       const tx = await marketplaceContract.cancelListing(nftAddress, tokenId, {
-          gasLimit: gasEstimate.mul(2),
+        gasLimit: 1000000,
       });
       const receipt = await tx.wait();
 
@@ -394,14 +392,30 @@ router.post('/buy', async (req, res) => {
   try {
       const { nftAddress, tokenId, price } = req.body;
 
-      const gasEstimate = await marketplaceContract.estimateGas.buyItem(nftAddress, tokenId, {
-          value: ethers.utils.parseEther(price.toString()),
-      });
+      // Validation des paramètres
+      if (!nftAddress || !ethers.utils.isAddress(nftAddress)) {
+          return res.status(400).json({ error: 'Adresse NFT invalide ou manquante.' });
+      }
+      if (tokenId === undefined || tokenId === null || typeof tokenId !== 'number') {
+          return res.status(400).json({ error: 'Token ID invalide ou manquant.' });
+      }
+      if (!price || isNaN(price)) {
+          return res.status(400).json({ error: 'Prix invalide ou manquant.' });
+      }
+
+      // Conversion correcte du prix en Wei
+      const priceInWei = ethers.BigNumber.from(price);
+
+      console.log(`Achat de NFT Address: ${nftAddress}, Token ID: ${tokenId}, Prix en Wei: ${priceInWei.toString()}`);
+
+      // Appeler la fonction buyItem avec la valeur correcte
       const tx = await marketplaceContract.buyItem(nftAddress, tokenId, {
-          value: ethers.utils.parseEther(price.toString()),
-          gasLimit: gasEstimate.mul(2),
+          value: priceInWei, // Utilisation directe du prix en Wei
+          gasLimit: 1000000,
       });
       const receipt = await tx.wait();
+
+      console.log('Transaction réussie:', receipt.transactionHash);
 
       res.json({ message: 'Carte achetée avec succès', transactionHash: receipt.transactionHash });
   } catch (error) {
@@ -409,6 +423,56 @@ router.post('/buy', async (req, res) => {
       res.status(500).json({ error: 'Erreur lors de l\'achat de la carte' });
   }
 });
+const validateParams = (req, res, next) => {
+  const { nftAddress, tokenId } = req.params;
+
+  if (!ethers.utils.isAddress(nftAddress)) {
+      return res.status(400).json({ error: 'Adresse NFT invalide.' });
+  }
+
+  const tokenIdNumber = Number(tokenId);
+  if (isNaN(tokenIdNumber) || tokenIdNumber < 0) {
+      return res.status(400).json({ error: 'Token ID invalide.' });
+  }
+
+  req.tokenIdNumber = tokenIdNumber; // Passer le tokenId validé
+  next();
+};
+// Récupérer les détails d'une carte spécifique
+router.get('/metadata/:nftAddress/:tokenId', validateParams, async (req, res) => {
+  const { nftAddress, tokenIdNumber } = req;
+
+  try {
+      // Créer une instance du contrat de collection
+      const collectionContract = new ethers.Contract(nftAddress, CollectionABI.abi, provider);
+
+      // Appeler la fonction getCardDetails du contrat
+      const [cardNumber, cardName, metadataURI] = await collectionContract.getCardDetails(tokenIdNumber);
+
+      // Vérifier si la carte existe (optionnel, selon votre logique de contrat)
+      if (cardNumber === 0 && cardName === '' && metadataURI === '') {
+          return res.status(404).json({ error: 'Carte non trouvée.' });
+      }
+
+      // Retourner les détails de la carte
+      res.json({
+          cardNumber: cardNumber.toString(), // Convertir en string pour éviter les problèmes de taille
+          cardName,
+          metadataURI,
+      });
+  } catch (error) {
+      console.error(`Erreur lors de la récupération des détails de la carte ${tokenIdNumber} à l'adresse ${nftAddress}:`, error);
+
+      // Gérer différents types d'erreurs
+      if (error.code === 'CALL_EXCEPTION') {
+          return res.status(404).json({ error: 'Carte non trouvée ou contrat invalide.' });
+      }
+
+      res.status(500).json({ error: 'Erreur interne du serveur.' });
+  }
+});
+
+
 
 module.exports = router;
 

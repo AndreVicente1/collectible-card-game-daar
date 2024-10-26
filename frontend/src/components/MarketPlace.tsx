@@ -7,7 +7,7 @@ import styles from '../css/Marketplace.module.css';
 interface Listing {
   nftAddress: string;
   tokenId: number;
-  price: string;
+  price: string; // Prix en Wei
   seller: string;
   metadata?: {
     name: string;
@@ -19,9 +19,24 @@ interface Listing {
 interface MarketplaceProps {
   userAddress: string;
   userNfts: any[];
+  signer?: ethers.providers.JsonRpcSigner;
+  fetchNFTs: () => Promise<void>; // Nouvelle Prop pour rafraîchir les NFTs
 }
 
-const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts }) => {
+const ERC721_ABI = [
+  "function getApproved(uint256 tokenId) view returns (address)",
+  "function isApprovedForAll(address owner, address operator) view returns (bool)",
+  "function setApprovalForAll(address operator, bool _approved) external",
+];
+
+const MARKETPLACE_ADDRESS = '0x715d5Fe8c17D243683FE836a0738bE5e2f9854A0';
+
+// Fonction de validation pour vérifier si une chaîne est un nombre entier valide (Wei)
+const isValidWei = (value: string) => {
+  return /^\d+$/.test(value);
+};
+
+const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts, signer, fetchNFTs }) => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,15 +53,29 @@ const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts }) => {
           response.data.listings.map(async (listing: Listing) => {
             try {
               // Remplacez cette URL par celle de votre API qui fournit les métadonnées
+              console.log('[DEBUG] listing:', listing);
+              console.log('1 [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] ');
               const metadataResponse = await axios.get(`http://localhost:5000/hearthstone/metadata/${listing.nftAddress}/${listing.tokenId}`);
+              console.log('2 [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] ');
+              console.log('[DEBUG] listing price:', listing.price);
+              // Valider et convertir le prix
+              let priceInWei: string;
+              if (isValidWei(listing.price)) {
+                priceInWei = listing.price;
+              } else {
+                priceInWei = ethers.utils.parseEther(listing.price).toString(); // Conversion en Wei
+              }
+              console.log('[DEBUG] priceInWei:', priceInWei);
               return {
                 ...listing,
+                price: priceInWei,
                 metadata: metadataResponse.data.metadata,
               };
             } catch (metadataError) {
               console.error(`Erreur lors de la récupération des métadonnées pour ${listing.tokenId}:`, metadataError);
               return {
                 ...listing,
+                price: isValidWei(listing.price) ? listing.price : ethers.utils.parseEther("0").toString(), // Valeur par défaut en Wei
                 metadata: {
                   name: `Token ${listing.tokenId}`,
                   image: '/images/cards/basic.png',
@@ -77,6 +106,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts }) => {
       alert('Achat réussi! Transaction Hash: ' + tx.data.transactionHash);
       // Rafraîchir les listes
       setListings(listings.filter(l => !(l.nftAddress === listing.nftAddress && l.tokenId === listing.tokenId)));
+      // Rafraîchir les NFTs de l'utilisateur
+      await fetchNFTs();
     } catch (err) {
       console.error('Erreur lors de l\'achat:', err);
       alert('Erreur lors de l\'achat de la carte.');
@@ -91,26 +122,57 @@ const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts }) => {
     }
   
     console.log('Listing NFT:', { nftAddress, tokenId, price });
-  
+
+    if (!signer) {
+      alert('Signer non disponible. Veuillez vous reconnecter.');
+      return;
+    }
+
     try {
-      const priceInWei = ethers.utils.parseEther(price); // Convertir en Wei ici
-  
-      const tx = await axios.post('http://localhost:5000/hearthstone/list', {
+      const nftContract = new ethers.Contract(nftAddress, ERC721_ABI, signer);
+
+      // Vérifier si le Marketplace est déjà approuvé pour ce token spécifique
+      const approvedAddress = await nftContract.getApproved(tokenId);
+      const isApprovedForAll = await nftContract.isApprovedForAll(userAddress, MARKETPLACE_ADDRESS);
+
+      if (approvedAddress.toLowerCase() !== MARKETPLACE_ADDRESS.toLowerCase() && !isApprovedForAll) {
+        // Demander l'approbation pour tous les tokens
+        const approvalTx = await nftContract.setApprovalForAll(MARKETPLACE_ADDRESS, true);
+        alert('Transaction d\'approbation envoyée. En attente de confirmation...');
+        await approvalTx.wait();
+        alert('Marketplace approuvé pour gérer vos NFTs.');
+      }
+
+      // Convertir le prix en Wei ici
+      const priceInWei = ethers.utils.parseEther(price); // Convertir en Wei
+
+      // Envoyer la requête de listing au backend
+      const listResponse = await axios.post('http://localhost:5000/hearthstone/list', {
         nftAddress,
         tokenId,
         price: priceInWei.toString(), // Envoyer le prix en Wei
       });
-      alert('Carte listée avec succès! Transaction Hash: ' + tx.data.transactionHash);
-      // Rafraîchir les listes
-      setListings([...listings, { nftAddress, tokenId, price, seller: userAddress }]);
+
+      alert('Carte listée avec succès! Transaction Hash: ' + listResponse.data.transactionHash);
+      
+      // Ajouter le listing avec le prix en Wei
+      setListings([...listings, { nftAddress, tokenId, price: priceInWei.toString(), seller: userAddress }]);
+      
       // Réinitialiser le prix
       setSalePrices(prev => ({ ...prev, [`${nftAddress}-${tokenId}`]: '' }));
-    } catch (err) {
+      // Rafraîchir les NFTs de l'utilisateur
+      await fetchNFTs();
+    } catch (err: any) {
       console.error('Erreur lors de la liste:', err);
-      alert('Erreur lors de la liste de la carte.');
+      if (err.response && err.response.data && err.response.data.error) {
+        alert(`Erreur lors de la liste de la carte: ${err.response.data.error}`);
+      } else if (err.code === 'ACTION_REJECTED') {
+        alert('Transaction rejetée par l\'utilisateur.');
+      } else {
+        alert('Erreur lors de la liste de la carte.');
+      }
     }
   };
-  
 
   const userCards = userNfts.map((nft: any) => {
     console.log('Mapping NFT:', nft); // Ajout de log pour débogage
@@ -123,15 +185,29 @@ const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts }) => {
     };
   });
   console.log('User Cards:', userCards);
-  
 
   const handlePriceChange = (nftAddress: string, tokenId: number, value: string) => {
     setSalePrices(prev => ({ ...prev, [`${nftAddress}-${tokenId}`]: value }));
   };
 
+  // Fonction pour rafraîchir les listings et les NFTs
+  const handleFetchNFTs = async () => {
+    setLoading(true);
+    setError(null);
+    await fetchNFTs();
+    setLoading(false);
+  };
+
   return (
     <div className={styles.marketplace}>
       <h1>Marketplace</h1>
+
+      {/* Bouton pour rafraîchir les NFTs */}
+      <div className={styles.fetchButtonContainer}>
+        <button className={styles.fetchButton} onClick={handleFetchNFTs}>
+          Rafraîchir Mes NFTs
+        </button>
+      </div>
 
       <div className={styles.listingsSection}>
         <h2>Cartes Disponibles</h2>
@@ -151,7 +227,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts }) => {
                   className={styles.nftImage}
                   onError={(e) => { e.currentTarget.src = '/images/cards/basic.png'; }}
                 />
-                <p>Prix: {listing.price} ETH</p>
+                <p>Prix: {ethers.utils.formatEther(listing.price)} ETH</p>
                 <p>Vendeur: {listing.seller}</p>
                 <button className={styles.buyButton} onClick={() => handleBuy(listing)}>Acheter</button>
               </div>

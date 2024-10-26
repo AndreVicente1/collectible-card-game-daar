@@ -6,6 +6,7 @@ const cors = require('cors');
 const syncHearthstoneCards = require('./hearthstoneAPI');
 const hearthstoneRouter = require('./routes/hearthstone');
 const marketplaceListener = require('./listeners/marketplaceListener');
+const Listing = require('./models/Listing')
 
 const app = express();
 
@@ -17,15 +18,21 @@ app.use(express.json());
 app.use('/hearthstone', hearthstoneRouter);
 
 // Connexion à MongoDB
+// Connexion à MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => {
+.then(async () => {
   console.log('Connecté à MongoDB');
 
-  // sets + cartes dans db, plus besoin, on a déjà tout récupéré
-  //syncHearthstoneCards(); 
+  // Supprimer tous les documents de la collection 'listings'
+  try {
+    await Listing.deleteMany({});
+    console.log('Tous les documents de la collection "listings" ont été supprimés.');
+  } catch (err) {
+    console.error('Erreur lors de la suppression des documents de "listings":', err);
+  }
 
   // Démarrer le serveur
   const PORT = process.env.PORT || 5000;
