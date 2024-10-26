@@ -1,13 +1,19 @@
 // src/App.tsx
 import { useEffect, useMemo, useRef, useState } from 'react'
+
+// Extend the Window interface to include the ethereum property
+declare global {
+  interface Window {
+    ethereum: any;
+  }
+}
 import styles from './css/App.module.css'
 import * as ethereum from '@/lib/ethereum'
 import * as main from '@/lib/main'
-import { ethers, BigNumber } from 'ethers'
+import { ethers } from 'ethers'
 import collectionAbi from '@/abis/Collection.json'
 import mainAbi from '@/abis/Main.json'
 import axios from 'axios'
-import Card from './components/Card'
 import HomePage from './components/HomePage';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Sidebar from './components/Sidebar'
@@ -15,8 +21,7 @@ import AdminPage from './components/AdminPage'
 import SetsPage from './components/SetsPage';
 import SetsPageCards from './components/SetsPageCards'
 import Booster from './components/Booster';
-import Marketplace from './components/MarketPlace'
-
+import Marketplace from './components/MarketPlace'; // Assurez-vous que le chemin est correct
 
 interface CardAPI {
   _id: string;
@@ -78,7 +83,7 @@ const useWallet = () => {
   }, [])
 
   return useMemo(() => {
-    if (!details || !contract) return
+    if (!details || !contract) return undefined
     return { details, contract }
   }, [details, contract])
 }
@@ -93,19 +98,17 @@ export const App = () => {
 
   const [collectionsAPI, setCollectionsAPI] = useState<any[]>([])
   const [cardsAPI, setCardsAPI] = useState<CardAPI[]>([])
-  //const [loading, setLoading] = useState<boolean>(true);
   const [loadingCount, setLoadingCount] = useState<number>(0);
   const stopLoading = () => setLoadingCount(prev => Math.max(prev - 1, 0));
   const [error, setError] = useState<string | null>(null);
 
-
-  // Function to fetch and log balance
+  // Fonction pour récupérer et enregistrer le solde
   const fetchAndLogBalance = async (provider: ethers.providers.Provider, address: string) => {
     try {
       const balanceBN = await provider.getBalance(address)
       const balance = ethers.utils.formatEther(balanceBN)
       console.log(`Balance of ${address}: ${balance} ETH`)
-      setBalance(balance) // Met à jour l'état
+      setBalance(balance)
     } catch (error) {
       console.error('Error fetching balance:', error)
     }
@@ -137,66 +140,139 @@ export const App = () => {
     }
   }
   
-  const fetchNFTs = async () => {
-    if (!wallet) return;
-    const { details, contract } = wallet;
-    const { account, provider } = details;
-  
+  // src/App.tsx
+
+const fetchNFTs = async () => {
+  if (!wallet) return;
+  const { details, contract } = wallet;
+  const { account, provider } = details;
+
+  try {
+    // 1. Vérification du réseau actif
+    const network = await provider.getNetwork();
+    if (network.chainId !== 31337) { // 31337 est le chainId par défaut pour Hardhat
+      alert('Veuillez connecter votre portefeuille au réseau Hardhat Localhost (chainId: 31337).');
+      
+      // Tenter de changer le réseau automatiquement via Metamask
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x7A69' }], // 31337 en hexadécimal
+        });
+      } catch (switchError: any) {
+        if (switchError.code === 4902) {
+          // Si le réseau n'est pas ajouté, tenter de l'ajouter
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x7A69', // 31337
+                chainName: 'Hardhat Localhost',
+                rpcUrls: ['http://localhost:8545'],
+                nativeCurrency: {
+                  name: 'ETH',
+                  symbol: 'ETH',
+                  decimals: 18,
+                },
+              }],
+            });
+          } catch (addError) {
+            console.error('Erreur lors de l\'ajout du réseau Hardhat à Metamask:', addError);
+            alert('Veuillez ajouter manuellement le réseau Hardhat à Metamask.');
+            return;
+          }
+        } else {
+          console.error('Erreur lors du changement de réseau:', switchError);
+          alert('Impossible de changer le réseau automatiquement. Veuillez le faire manuellement.');
+          return;
+        }
+      }
+
+      // Attendre quelques secondes pour que Metamask change de réseau
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+
+    // 2. Vérification des Adresses des Contrats
+    // Assurez-vous que les adresses sont correctes. Utilisez des variables d'environnement.
+    const MARKETPLACE_ADDRESS = '0x715d5Fe8c17D243683FE836a0738bE5e2f9854A0';
+    if (!MARKETPLACE_ADDRESS) {
+      console.error('Adresse du contrat Marketplace manquante dans les variables d\'environnement.');
+      alert('Erreur de configuration: Adresse du contrat Marketplace manquante.');
+      return;
+    }
+
+    // 3. Fetch des NFTs
     if (account) {
       await fetchAndLogBalance(provider, account);
     }
-  
+
     await checkOwner();
-  
-    try {
-      const collectionCountBN = await contract.getCollectionCount();
-      const collectionCount = collectionCountBN.toNumber();
-  
-      console.log("Number of collections:", collectionCount);
-      console.log("Fetching all NFTs...");
-      const allNFTs = [];
-  
-      for (let i = 0; i < collectionCount; i++) {
-        const [collectionName, collectionAddress, cardCount] = await contract.getCollectionInfo(i);
-        const collectionContract = new ethers.Contract(collectionAddress.toString(), collectionAbi, provider);
-  
-        // Récupérer le nombre total de tokens dans cette collection
+
+    const collectionCountBN = await contract.getCollectionCount();
+    const collectionCount = collectionCountBN.toNumber();
+
+    console.log("Number of collections:", collectionCount);
+    console.log("Fetching all NFTs...");
+    const allNFTs = [];
+
+    for (let i = 0; i < collectionCount; i++) {
+      const [collectionName, collectionAddress, cardCount] = await contract.getCollectionInfo(i);
+      console.log(`Collection ${i}: ${collectionName} at ${collectionAddress} with ${cardCount} cards`);
+
+      // Vérifiez si l'adresse de la collection est correcte
+      if (!ethers.utils.isAddress(collectionAddress)) {
+        console.warn(`Adresse de collection invalide: ${collectionAddress}`);
+        continue; // Passer à la collection suivante
+      }
+
+      const collectionContract = new ethers.Contract(collectionAddress.toString(), collectionAbi, provider);
+
+      // Récupérer le nombre total de tokens dans cette collection
+      let nextTokenId: number;
+      try {
         const nextTokenIdBN = await collectionContract.nextTokenId();
-        const nextTokenId = nextTokenIdBN.toNumber();
-  
-        for (let tokenId = 0; tokenId < nextTokenId; tokenId++) {
-          try {
-            const ownerOf = await collectionContract.ownerOf(tokenId);
-  
-            if (account && ownerOf.toLowerCase() === account.toLowerCase()) {
-              const tokenURI = await collectionContract.tokenURI(tokenId);
-              const metadata = { image: tokenURI };
-  
-              allNFTs.push({
-                collectionId: i,
-                collectionName,
-                tokenId,
-                metadata,
-                collectionAddress, // Inclusion de l'adresse de la collection
-              });
-  
-              console.log(`Le token ID ${tokenId} vous appartient dans la collection ${collectionName}.`);
-            }
-          } catch (error) {
-            console.warn(`Erreur lors de la récupération du Token ID ${tokenId} dans la collection ${collectionName}:`, error);
+        nextTokenId = nextTokenIdBN.toNumber();
+        console.log(`Next Token ID for collection ${collectionName}: ${nextTokenId}`);
+      } catch (error) {
+        console.warn(`Erreur lors de la récupération de nextTokenId pour la collection ${collectionName}:`, error);
+        continue; // Passer à la collection suivante
+      }
+
+      for (let tokenId = 0; tokenId < nextTokenId; tokenId++) {
+        try {
+          const ownerOf = await collectionContract.ownerOf(tokenId);
+          console.log(`Token ID ${tokenId} owned by ${ownerOf}`);
+
+          if (account && ownerOf.toLowerCase() === account.toLowerCase()) {
+            const tokenURI = await collectionContract.tokenURI(tokenId);
+            const metadata = { image: tokenURI };
+
+            allNFTs.push({
+              collectionId: i,
+              collectionName,
+              tokenId,
+              metadata,
+              collectionAddress, // Inclusion de l'adresse de la collection
+            });
+
+            console.log(`Le token ID ${tokenId} vous appartient dans la collection ${collectionName}.`);
           }
+        } catch (error) {
+          console.warn(`Erreur lors de la récupération du Token ID ${tokenId} dans la collection ${collectionName}:`, error);
         }
       }
-  
-      console.log("NFTs fetched successfully.");
-      setNfts(allNFTs);
-    } catch (error) {
-      console.error("Error fetching NFTs:", error);
-    } finally {
-      stopLoading();
     }
-  };
-  
+
+    console.log("NFTs fetched successfully.", allNFTs);
+    setNfts(allNFTs);
+  } catch (error) {
+    console.error("Error fetching NFTs:", error);
+  } finally {
+    stopLoading();
+  }
+};
+
+
 
   const isValidAddress = (address: string) => {
     try {
@@ -233,12 +309,9 @@ export const App = () => {
     const fetchData = async () => {
       try {
         await Promise.all([fetchNFTs(), fetchCollections()]);
-        //await createCollectionsAPI();
-        //setLoading(false);
       } catch (err) {
         console.error(err);
         setError('Erreur lors du chargement des données.');
-        //setLoading(false);
       }
     };
 
@@ -246,7 +319,7 @@ export const App = () => {
 
   }, [wallet, refreshData])
 
-  // Function to create a new collection
+  // Fonction pour créer une nouvelle collection
   const createCollection = async (name: string, cardCount: number) => {
     if (!wallet) return
     const { contract } = wallet
@@ -262,24 +335,27 @@ export const App = () => {
       console.log('Transaction confirmed:', tx.hash)
       alert('Collection créée avec succès')
 
-      // refresh les données
+      // Rafraîchir les données
       setRefreshData(prev => !prev)
 
     } catch (error: any) {
       console.error('Erreur lors de la création de la collection :', error)
       let message = 'Erreur lors de la création de la collection.';
-    if (error.code === 'CALL_EXCEPTION' && error.reason) {
-      message += ` Raison: ${error.reason}`;
-    } else if (error.data && error.data.message) {
-      message += ` Raison: ${error.data.message}`;
-    } else if (error.error && error.error.data && error.error.data.message) {
-      message += ` Raison: ${error.error.data.message}`;
-    }
-    alert('Erreur lors de la création de la collection.')
+      if (error.code === 'CALL_EXCEPTION' && error.reason) {
+        message += ` Raison: ${error.reason}`;
+      } else if (error.data && error.data.message) {
+        message += ` Raison: ${error.data.message}`;
+      } else if (error.error && error.error.data && error.error.data.message) {
+        message += ` Raison: ${error.error.data.message}`;
+      }
+      alert(message);
     }
   }
 
   const loading = loadingCount > 0;
+
+  // Récupérer le signer depuis le provider du wallet
+  const signer = wallet?.details.provider ? (wallet.details.provider as ethers.providers.Web3Provider).getSigner() : undefined;
 
   return (
     <div className={styles.appContainer}>
@@ -312,7 +388,14 @@ export const App = () => {
             />
             <Route
               path="/marketplace"
-              element={<Marketplace userAddress={wallet?.details.account || ''} userNfts={nfts} />} 
+              element={
+                <Marketplace 
+                  userAddress={wallet.details.account || ''} 
+                  userNfts={nfts} 
+                  signer={signer} 
+                  fetchNFTs={fetchNFTs} // Passage de la fonction fetchNFTs
+                />
+              } 
             />
 
             <Route
@@ -331,3 +414,5 @@ export const App = () => {
     </div>
   )
 }
+
+export default App

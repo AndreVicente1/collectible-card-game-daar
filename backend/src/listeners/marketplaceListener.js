@@ -24,7 +24,7 @@ marketplaceContract.on('ItemListed', async (nftAddress, tokenId, seller, price) 
         // Ajouter ou mettre à jour le listing dans la base de données
         await Listing.findOneAndUpdate(
             { nftAddress, tokenId },
-            { price: ethers.utils.formatEther(price), seller },
+            { price: price, seller },
             { upsert: true, new: true }
         );
         console.log(`Item Listed: ${nftAddress} TokenID: ${tokenId} Price: ${ethers.utils.formatEther(price)} ETH Seller: ${seller}`);
