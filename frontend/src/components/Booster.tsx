@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styles from '../css/Boosters.module.css';
 import BoosterABI from '../abis/Booster.json';
 import { ethers } from 'ethers';
+import * as ethereum from '@/lib/ethereum';
 import setImagesBoosters from '@/utils/setImagesBoosters';
 import BoosterModal from './BoosterModal';
 import axios from 'axios';
@@ -17,13 +18,22 @@ interface Card {
     metadataURI: string;
 }
 
-const Boosters: React.FC = () => {
+interface BoosterProps {
+  wallet : {
+    details: ethereum.Details;
+    contract: ethers.Contract;
+  }
+}
+
+const Boosters: React.FC<BoosterProps> = ({wallet}) => {
     const [boosterTypes, setBoosterTypes] = useState<BoosterType[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedCards, setSelectedCards] = useState<Card[] | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [buyingBooster, setBuyingBooster] = useState<boolean>(false);
+
+    const userAdd = wallet.details.account;
 
     useEffect(() => {
         const fetchBoosterSets = async () => {
@@ -42,12 +52,32 @@ const Boosters: React.FC = () => {
         fetchBoosterSets();
     }, []);
 
-    const handleBuyBooster = async (boosterName: string, boosterTypeId: number) => {
+    const handleBuyBooster = async (boosterName: string, boosterTypeId: number, userAdd: string) => {
         setBuyingBooster(true);
         console.log("BoosterName passed:", boosterName, "BoosterTypeId passed:", boosterTypeId);
         try {
-            // Envoyer une requête POST pour acheter et ouvrir le booster
-            const response = await axios.post(`http://localhost:5000/hearthstone/boosters/buyAndRedeem`, { boosterName, boosterTypeId });
+
+            const collectionId = await wallet.contract.getCollectionIdByName(boosterName);
+            console.log('Collection ID récup:', collectionId.toString());
+
+            // c'est l'utilisateur qui paye
+            const tx = await wallet.contract.createBooster(
+              boosterName,
+              collectionId,
+              boosterTypeId,
+              {
+                value: ethers.utils.parseEther("0.05")
+              }
+            );
+            const receipt = await tx.wait();
+
+            // Retrieve the latest booster ID from the events in the receipt
+            const boosterMintedEvent = receipt.events.find((event: { event: string; }) => event.event === 'BoosterMinted');
+            const boosterId = boosterMintedEvent.args.boosterId;
+            console.log('Booster ID récup:', boosterId.toString());
+
+            // Envoyer une requête POST pour ouvrir le booster
+            const response = await axios.post(`http://localhost:5000/hearthstone/boosters/buyAndRedeem`, { boosterName, boosterId, collectionId, userAdd });
     
             console.log('Réponse de l\'achat du booster:', response.data);
             console.log('Cartes obtenues:', response.data.cards);
@@ -88,7 +118,7 @@ const Boosters: React.FC = () => {
                   />
                   <h3>{booster.name}</h3>
                   <button
-                    onClick={() => handleBuyBooster(booster.name, booster.boosterTypeId)}
+                    onClick={() => handleBuyBooster(booster.name, booster.boosterTypeId, userAdd? userAdd : '')}
                     className={styles.buyButton}
                   >
                     {buyingBooster ? 'Achat en cours...' : 'Acheter pour 0.05 ETH'}

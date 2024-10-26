@@ -264,25 +264,29 @@ router.get('/boosters', async (req, res) => {
 
 router.post('/boosters/buyAndRedeem', async (req, res) => {
   try {
-    const { boosterName, boosterTypeId } = req.body;
+    const { boosterName, boosterId, collectionId, userAdd } = req.body;
 
     console.log('Achat et rédemption du booster avec le nom:', boosterName);
-    // Buy the booster
-    const collectionId = await mainContract.getCollectionIdByName(boosterName);
-    console.log('Collection ID récup:', collectionId.toString());
 
-    const buyTx = await mainContract.createBooster(boosterName, collectionId, boosterTypeId,
-      { value: ethers.utils.parseEther("0.05"),
-      });
-    const buyReceipt = await buyTx.wait();
-    console.log('Booster acheté avec succès. Transaction hash:', buyReceipt.transactionHash);
-    // Retrieve the latest booster ID from the events in the receipt
-    const boosterMintedEvent = buyReceipt.events.find(event => event.event === 'BoosterMinted');
-    const boosterId = boosterMintedEvent.args.boosterId;
-    console.log('Booster ID récup:', boosterId.toString());
+    console.log('id booster envoyé: ', boosterId);
+    
+    const cardCountBigNumber = await mainContract.getCardCount(collectionId);
+    const cardCount = cardCountBigNumber.toNumber();
+
+    // indices aléatoires pour les cartes dans la collection (entre 0 et cardCount-1)
+    const generateRandomIndices = (count, max) => {
+      const indices = [];
+      for (let i = 0; i < count; i++) {
+        indices.push(Math.floor(Math.random() * max));
+      }
+      return indices;
+    };
+
+    const indices = generateRandomIndices(5, cardCount);
+    console.log('Indices aléatoires générés:', indices);
 
     // Redeem the booster
-    const redeemTx = await mainContract.openBooster(boosterId, { gasLimit: 2000000 });
+    const redeemTx = await mainContract.openBooster(boosterId, userAdd, indices, { gasLimit: 2000000 });
     const redeemReceipt = await redeemTx.wait();
     console.log('Booster open: Transaction hash:', redeemTx.hash);
 

@@ -17,33 +17,6 @@ import SetsPageCards from './components/SetsPageCards'
 import Booster from './components/Booster';
 import Marketplace from './components/MarketPlace'
 
-
-interface CardAPI {
-  _id: string;
-  id: number;
-  name: string;
-  type: string;
-  set: {
-    _id: string;
-    name: string;
-    slug: string;
-  };
-  rarity: string;
-  description: string;
-  image: string;
-  attributes: Array<{
-    trait_type: string;
-    value: string;
-  }>;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Set {
-  name: string;
-  collectibleCount: number;
-}
-
 type Canceler = () => void
 
 const useAffect = (
@@ -91,9 +64,6 @@ export const App = () => {
   const [balance, setBalance] = useState<string>('0')
   const [refreshData, setRefreshData] = useState(false)
 
-  const [collectionsAPI, setCollectionsAPI] = useState<any[]>([])
-  const [cardsAPI, setCardsAPI] = useState<CardAPI[]>([])
-  //const [loading, setLoading] = useState<boolean>(true);
   const [loadingCount, setLoadingCount] = useState<number>(0);
   const stopLoading = () => setLoadingCount(prev => Math.max(prev - 1, 0));
   const [error, setError] = useState<string | null>(null);
@@ -127,15 +97,6 @@ export const App = () => {
       console.error("Error fetching owner:", error);
     }
   };
-
-  async function fetchTokenMetadata(tokenURI: string): Promise<any | null> {
-    try {
-      return { image: tokenURI };
-    } catch (error) {
-      console.error(`Erreur lors de la récupération des métadonnées pour ${tokenURI}`, error);
-      return null;
-    }
-  }
   
   const fetchNFTs = async () => {
     if (!wallet) return;
@@ -157,27 +118,21 @@ export const App = () => {
       const allNFTs = [];
   
       for (let i = 0; i < collectionCount; i++) {
-        const [collectionName, collectionAddress, cardCount] = await contract.getCollectionInfo(i);
-        const collectionContract = new ethers.Contract(collectionAddress.toString(), collectionAbi, provider);
-  
-        // Récupérer le nombre total de tokens dans cette collection
-        const nextTokenIdBN = await collectionContract.nextTokenId();
+        const [collectionName, cardCount] = await contract.getCollectionInfo(i);
+
+        const nextTokenIdBN = await contract.getTokensInCollection(i);
         const nextTokenId = nextTokenIdBN.toNumber();
   
         for (let tokenId = 0; tokenId < nextTokenId; tokenId++) {
           try {
-            const ownerOf = await collectionContract.ownerOf(tokenId);
+            const { owner, tokenURI } = await contract.getTokenInfo(i, tokenId);
   
-            if (account && ownerOf.toLowerCase() === account.toLowerCase()) {
-              const tokenURI = await collectionContract.tokenURI(tokenId);
-              const metadata = { image: tokenURI };
-  
+            if (account && owner.toLowerCase() === account.toLowerCase()) {
               allNFTs.push({
                 collectionId: i,
                 collectionName,
                 tokenId,
-                metadata,
-                collectionAddress, // Inclusion de l'adresse de la collection
+                metadata: { image: tokenURI },
               });
   
               console.log(`Le token ID ${tokenId} vous appartient dans la collection ${collectionName}.`);
@@ -196,21 +151,12 @@ export const App = () => {
       stopLoading();
     }
   };
-  
 
-  const isValidAddress = (address: string) => {
-    try {
-      return ethers.utils.isAddress(address);
-    } catch {
-      return false;
-    }
-  };
 
   useEffect(() => {
     if (!wallet) return
 
     const { details, contract } = wallet
-    const { account, provider } = details
     
     const fetchCollections = async () => {
       try {
@@ -230,19 +176,6 @@ export const App = () => {
       }
     }
 
-    const fetchData = async () => {
-      try {
-        await Promise.all([fetchNFTs(), fetchCollections()]);
-        //await createCollectionsAPI();
-        //setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError('Erreur lors du chargement des données.');
-        //setLoading(false);
-      }
-    };
-
-    fetchData().catch(console.error);
 
   }, [wallet, refreshData])
 
@@ -294,7 +227,7 @@ export const App = () => {
           <Routes>
             <Route
               path="/"
-              element={<HomePage nfts={nfts} balance={balance} isOwner={isOwner} loading={loading} error={error} fetchNFTs={fetchNFTs}/>}
+              element={<HomePage nfts={nfts} balance={balance} isOwner={isOwner} loading={loading} error={error} fetchNFTs={fetchNFTs} refreshData={refreshData} setRefreshData={setRefreshData}/>}
             />
 
             <Route
@@ -308,7 +241,7 @@ export const App = () => {
 
             <Route
               path="/booster"
-              element={<Booster />}
+              element={<Booster wallet={wallet} /> }
             />
             <Route
               path="/marketplace"

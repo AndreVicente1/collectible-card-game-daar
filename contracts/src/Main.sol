@@ -96,6 +96,24 @@ contract Main is Ownable {
         return (names, addresses, cardCounts);
     }
     
+    // Obtenir le nombre total de tokens dans une collection
+    function getTokensInCollection(uint256 collectionId) external view returns (uint256) {
+        Collection collection = collections[collectionId];
+        return collection.nextTokenId();
+    }
+
+    // Obtenir les informations d’un token spécifique dans une collection
+    function getTokenInfo(uint256 collectionId, uint256 tokenId) external view returns (address owner, string memory tokenURI) {
+        Collection collection = collections[collectionId];
+        return (collection.ownerOf(tokenId), collection.tokenURI(tokenId));
+    }
+
+    // Nombre de cartes de la collection
+    function getCardCount(uint256 collectionId) external view returns (uint256) {
+        Collection collection = collections[collectionId];
+        return collection.cardCount();
+    }
+
 
     // Boosters
 
@@ -104,8 +122,7 @@ contract Main is Ownable {
         Booster newBooster = new Booster(_name, _collectionId, _boosterId, msg.sender, address(this));
         boosters[_boosterId] = newBooster;
         boosterCount++;
-        console.log("Checking if msg.sender has correct permissions", msg.sender);
-        console.log("Collection ID:", _collectionId, "Payment:", msg.value);
+        
         emit BoosterMinted(_boosterId, _name, _collectionId, msg.sender);
     }
 
@@ -114,28 +131,15 @@ contract Main is Ownable {
         return randomNum % _mod;
     }
 
-    function openBooster(uint256 _boosterId) external {
+    function openBooster(uint256 _boosterId, address userAdd, uint256[] memory randomIndices) external {
         console.log("Opening booster ", _boosterId);
         Booster booster = boosters[_boosterId];
-        require(msg.sender == booster.owner(), "Only the owner can open this booster");
+
         Collection collection = collections[booster.collectionId()];
-        console.log('booster opening');
         booster.openBooster();
-        console.log("Booster opened by ", msg.sender);
         // 5 cartes dans 1 booster
         uint256 cardCount = collection.cardCount();
         require(cardCount >= 5, "Not enough cards in collection");
-
-        uint256 availableCount = cardCount;
-        uint256[] memory randomIndices = new uint256[](5);
- 
-        // 5 indices aléatoires
-        for (uint256 i = 0; i < 5; i++) {
-            console.log("Opening card ", i);
-            uint256 randomIndex = _createRandomNum(cardCount - i); 
-            randomIndices[i] = randomIndex;
-            availableCount--;
-        }
 
         console.log('minting cards booster');
         uint256[] memory cardNumbers = new uint256[](5);
@@ -144,27 +148,17 @@ contract Main is Ownable {
 
         // Mint les cartes tirées aléatoirement
         for (uint256 i = 0; i < randomIndices.length; i++) {
-            //(uint256 cardNumber, string memory cardName, string memory metadataURI) = collection.getCardDetails(randomIndices[i]);
             uint256 tokenId = randomIndices[i];
             (cardNumbers[i], cardNames[i], metadataURIs[i]) = collection.getCardDetails(tokenId);
             console.log("Card Number:", cardNumbers[i]);
             console.log("Card Name:", cardNames[i]);
             console.log("Metadata URI:", metadataURIs[i]);
-            //cardNumbers[i] = cardNumber;
-        
-            //console.log('cardName', cardName);
-            // Store each string in memory correctly
-            //cardNames[i] = cardName;
-            //console.log('metadataURI', metadataURI);
-            //metadataURIs[i] = metadataURI;
-            collection.mint(msg.sender, cardNumbers[i], cardNames[i], metadataURIs[i]);
-            console.log("APRES:Card Number:", cardNumbers[i]);
-            console.log("Card Name:", cardNames[i]);
-            console.log("Metadata URI:", metadataURIs[i]);
+            collection.mint(userAdd, cardNumbers[i], cardNames[i], metadataURIs[i]);
+
         }
         console.log('open done!!');
 
-        emit BoosterOpened(_boosterId, msg.sender, cardNumbers, cardNames, metadataURIs);
+        emit BoosterOpened(_boosterId, userAdd, cardNumbers, cardNames, metadataURIs);
     }
 
     // Function to get the collection ID by name
@@ -176,4 +170,5 @@ contract Main is Ownable {
         }
         revert("Collection not found");
     }
+
 }

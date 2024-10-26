@@ -19,6 +19,9 @@ interface HomePageProps {
   loading: boolean;
   error: string | null;
   fetchNFTs: () => Promise<void>;
+
+  refreshData: boolean;
+  setRefreshData: (value: boolean) => void;
 }
 
 interface Collection {
@@ -27,7 +30,7 @@ interface Collection {
   cardCount: number;
 }
 
-const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, error, fetchNFTs }) => {
+const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, error, fetchNFTs, refreshData, setRefreshData }) => {
   // États pour la synchronisation
   const [syncing, setSyncing] = useState<boolean>(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean>(false);
@@ -55,6 +58,7 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
       const response = await axios.post('http://localhost:5000/hearthstone/create-collections');
       console.log('Réponse de la synchronisation:', response.data);
       setSyncSuccess(true);
+      setRefreshData(!refreshData);
       setHasSynced(true); 
       setCountdown(null); 
     } catch (err: any) {
@@ -70,7 +74,7 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
   const fetchCollections = async () => {
     try {
       setCollectionsLoading(true);
-      const response = await axios.get('http://localhost:5000/hearthstone/get-collections'); // Requête au backend
+      const response = await axios.get('http://localhost:5000/hearthstone/get-collections');
       const { collections } = response.data;
       setCollections(collections);
     } catch (err: any) {
@@ -100,11 +104,8 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
 
   useEffect(() => {
     fetchCollections();
-  }, []); // Récupère les collections au montage du composant
-
-  useEffect(() => {
     fetchNFTs();
-  }, []);
+  }, [refreshData]); // Récupère les collections au montage du composant
 
   const handleManualSync = () => {
     if (!syncing) {

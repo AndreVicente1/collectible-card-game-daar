@@ -135,7 +135,6 @@ const fetchAndSaveCardsForSet = async (setSlug, setName, accessToken) => {
                 // Vérifier si la carte existe déjà
                 const existingCard = await HearthstoneCard.findOne({ id: card.id });
                 if (!existingCard) {
-                    // TODO: que les attributs qu'on veut (id, nom, image)?
                     const newCard = new HearthstoneCard({
                         id: card.id,
                         name: card.name,
