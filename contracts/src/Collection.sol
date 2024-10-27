@@ -44,7 +44,6 @@ contract Collection is ERC721URIStorage, Ownable {
         // Mint the NFT to the specified address
         _safeMint(_to, tokenId);
 
-        // Store card details in the mapping
         cards[tokenId] = Card({
             cardNumber: _cardNumber,
             cardName: _cardName,

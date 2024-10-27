@@ -38,7 +38,6 @@ const HomePage: React.FC<HomePageProps> = ({ nfts, balance, isOwner, loading, er
 
   const [countdown, setCountdown] = useState<number | null>(null);
 
-  // États pour les collections
   const [collections, setCollections] = useState<Collection[]>([]);
   const [collectionsLoading, setCollectionsLoading] = useState<boolean>(true);
   const [collectionsError, setCollectionsError] = useState<string | null>(null);

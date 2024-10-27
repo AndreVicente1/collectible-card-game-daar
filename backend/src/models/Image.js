@@ -1,4 +1,3 @@
-// backend/models/Image.js
 const mongoose = require('mongoose');
 
 const ImageSchema = new mongoose.Schema({

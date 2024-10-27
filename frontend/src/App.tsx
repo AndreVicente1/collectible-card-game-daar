@@ -112,7 +112,7 @@ export const App = () => {
     try {
       // 1. Vérification du réseau actif
       const network = await provider.getNetwork();
-      if (network.chainId !== 31337) { // 31337 est le chainId par défaut pour Hardhat
+      if (network.chainId !== 31337) {
         alert('Veuillez connecter votre portefeuille au réseau Hardhat Localhost (chainId: 31337).');
         
         // Tenter de changer le réseau automatiquement via Metamask
@@ -155,8 +155,7 @@ export const App = () => {
       }
   
       // 2. Vérification des Adresses des Contrats
-      // Assurez-vous que les adresses sont correctes. Utilisez des variables d'environnement.
-      const MARKETPLACE_ADDRESS = '0x715d5Fe8c17D243683FE836a0738bE5e2f9854A0';
+      const MARKETPLACE_ADDRESS = '0x3B2268EbC246d3386Cfd831E864F66081561538C';
       if (!MARKETPLACE_ADDRESS) {
         console.error('Adresse du contrat Marketplace manquante dans les variables d\'environnement.');
         alert('Erreur de configuration: Adresse du contrat Marketplace manquante.');
@@ -184,7 +183,7 @@ export const App = () => {
         // Vérifiez si l'adresse de la collection est correcte
         if (!ethers.utils.isAddress(collectionAddress)) {
           console.warn(`Adresse de collection invalide: ${collectionAddress}`);
-          continue; // Passer à la collection suivante
+          continue;
         }
   
         const collectionContract = new ethers.Contract(collectionAddress.toString(), collectionAbi, provider);
@@ -197,7 +196,7 @@ export const App = () => {
           console.log(`Next Token ID for collection ${collectionName}: ${nextTokenId}`);
         } catch (error) {
           console.warn(`Erreur lors de la récupération de nextTokenId pour la collection ${collectionName}:`, error);
-          continue; // Passer à la collection suivante
+          continue;
         }
   
         for (let tokenId = 0; tokenId < nextTokenId; tokenId++) {
@@ -214,7 +213,7 @@ export const App = () => {
                 collectionName,
                 tokenId,
                 metadata,
-                collectionAddress, // Inclusion de l'adresse de la collection
+                collectionAddress,
               });
   
               console.log(`Le token ID ${tokenId} vous appartient dans la collection ${collectionName}.`);
@@ -320,7 +319,7 @@ export const App = () => {
                   userAddress={wallet.details.account || ''} 
                   userNfts={nfts} 
                   signer={signer} 
-                  fetchNFTs={fetchNFTs} // Passage de la fonction fetchNFTs
+                  fetchNFTs={fetchNFTs}
                 />
               } 
             />

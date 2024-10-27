@@ -4,6 +4,8 @@ import styles from '../css/SetsPage.module.css';
 import { Link } from 'react-router-dom';
 import setImages from '../utils/setImages';
 
+// Composant pour afficher les sets
+
 interface Set {
   id: number;
   name: string;
@@ -24,7 +26,6 @@ const SetsPage: React.FC = () => {
         const response = await axios.get('http://localhost:5000/hearthstone/sets');
         setSets(response.data.sets);
 
-        //handleSyncCollections();
       } catch (err: any) {
         console.error('Error fetching sets:', err);
         setError('Erreur lors de la récupération des sets.');

@@ -1,4 +1,3 @@
-// backend/src/listeners/marketplaceListener.js
 const { ethers } = require('ethers');
 const Listing = require('../models/Listing');
 const MarketplaceABI = require('../../../contracts/artifacts/src/Marketplace.sol/Marketplace.json'); 

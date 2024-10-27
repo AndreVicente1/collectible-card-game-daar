@@ -20,7 +20,7 @@ const marketplaceContract = new ethers.Contract(process.env.ADDRESSE_MARKETPLACE
 // get all sets
 router.get('/sets', async (req, res) => {
   try {
-    const { name, type } = req.query; // Récupérer les paramètres de requête
+    const { name, type } = req.query;
 
     console.log('try get sets');
 
@@ -120,9 +120,10 @@ router.get('/cards/name/:name', async (req, res) => {
 });
 
 
-/*-----------------------------------------------------------*/
 
+// =====================================================COLLECTIONS AND BOOSTERS=====================================================
 
+// create collections from sets in the database
 router.post('/create-collections', async (req, res) => {
   try {
     console.log('and cards...');
@@ -167,6 +168,7 @@ router.post('/create-collections', async (req, res) => {
   }
 });
 
+// get all collections
 router.get('/get-collections', async (req, res) => {
   try {
     console.log('Fetching collections from the blockchain');
@@ -189,6 +191,7 @@ router.get('/get-collections', async (req, res) => {
   }
 });
 
+// mint a card
 router.post('/mint', async (req, res) => {
   try {
     const { collectionAddress, toAddress, cardNumber, cardName, metadataURI } = req.body;
@@ -262,7 +265,8 @@ router.get('/boosters', async (req, res) => {
   }
 });
 
-router.post('/boosters/buyAndRedeem', async (req, res) => {
+// open a booster
+router.post('/boosters/open', async (req, res) => {
   try {
     const { boosterName, boosterId, collectionId, userAdd } = req.body;
 
@@ -323,6 +327,7 @@ router.post('/boosters/buyAndRedeem', async (req, res) => {
 
 
 // =====================================================MARKETPLACE=====================================================
+
 // Récupérer toutes les listes disponibles
 router.get('/listings', async (req, res) => {
   try {
@@ -353,7 +358,7 @@ router.post('/list', async (req, res) => {
           return res.status(400).json({ error: 'Prix invalide ou manquant.' });
       }
 
-      // Conversion correcte du prix (éviter la double conversion)
+      // Conversion correcte du prix
       const priceInWei = ethers.BigNumber.from(price);
       
       // Appeler la fonction listItem
@@ -423,6 +428,7 @@ router.post('/buy', async (req, res) => {
       res.status(500).json({ error: 'Erreur lors de l\'achat de la carte' });
   }
 });
+
 const validateParams = (req, res, next) => {
   const { nftAddress, tokenId } = req.params;
 
@@ -438,6 +444,7 @@ const validateParams = (req, res, next) => {
   req.tokenIdNumber = tokenIdNumber; // Passer le tokenId validé
   next();
 };
+
 // Récupérer les détails d'une carte spécifique
 router.get('/metadata/:nftAddress/:tokenId', validateParams, async (req, res) => {
   const { nftAddress, tokenIdNumber } = req;
@@ -449,7 +456,7 @@ router.get('/metadata/:nftAddress/:tokenId', validateParams, async (req, res) =>
       // Appeler la fonction getCardDetails du contrat
       const [cardNumber, cardName, metadataURI] = await collectionContract.getCardDetails(tokenIdNumber);
 
-      // Vérifier si la carte existe (optionnel, selon votre logique de contrat)
+      // Vérifier si la carte existe
       if (cardNumber === 0 && cardName === '' && metadataURI === '') {
           return res.status(404).json({ error: 'Carte non trouvée.' });
       }
@@ -473,7 +480,5 @@ router.get('/metadata/:nftAddress/:tokenId', validateParams, async (req, res) =>
 });
 
 
-
-module.exports = router;
 
 module.exports = router;

@@ -4,6 +4,8 @@ import styles from '../css/SetsPageCards.module.css';
 import { useParams, Link } from 'react-router-dom';
 import setImages from '../utils/setImages';
 
+// Composant pour afficher les cartes d'un set
+
 interface Card {
   id: number;
   name: string;

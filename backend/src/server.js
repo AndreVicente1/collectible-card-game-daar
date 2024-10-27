@@ -18,7 +18,6 @@ app.use(express.json());
 app.use('/hearthstone', hearthstoneRouter);
 
 // Connexion à MongoDB
-// Connexion à MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -44,14 +43,3 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch((err) => {
   console.error('Erreur de connexion à MongoDB:', err);
 });
-
-console.log('cc');
-
-// Routes
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-});
-
-/*const imagesRouter = require('./routes/images');
-app.use('/images', imagesRouter);
-*/

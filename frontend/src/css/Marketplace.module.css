@@ -1,16 +1,12 @@
-/* src/css/Marketplace.module.css */
-
-/* Conteneur principal de la marketplace */
 .marketplace {
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 20px;
     color: #ffffff;
-    background-color: rgba(0, 0, 0, 0.8); /* Exemple de fond sombre pour contraste */
+    background-color: rgba(0, 0, 0, 0.8);
 }
 
-/* Titre principal */
 .marketplace h1 {
     text-align: center;
     margin-bottom: 30px;
@@ -19,7 +15,6 @@
     color: #ffffff;
 }
 
-/* Sections de la marketplace */
 .listingsSection,
 .userCardsSection {
     width: 100%;
@@ -36,7 +31,6 @@
     color: #ffffff;
 }
 
-/* Conteneur pour les cartes */
 .nftsContainer {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -45,7 +39,6 @@
     max-width: 1200px;
 }
 
-/* Style individuel des cartes */
 .nftCard {
     background-color: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -68,7 +61,6 @@
     margin-bottom: 15px;
 }
 
-/* Boutons */
 .buyButton,
 .listButton {
     padding: 10px 20px;
@@ -93,7 +85,6 @@
     cursor: not-allowed;
 }
 
-/* Messages de chargement et d'erreur */
 .loading,
 .error {
     color: #ffffff;
@@ -101,7 +92,6 @@
     margin-top: 20px;
 }
 
-/* Section de mise en vente des cartes de l'utilisateur */
 .saleContainer {
     display: flex;
     flex-direction: column;
@@ -123,7 +113,6 @@
     color: #dddddd;
 }
 
-/* Adaptation pour le fond sombre */
 .listingsSection,
 .userCardsSection {
     background-color: rgba(0, 0, 0, 0.5);

@@ -18,12 +18,17 @@ margin-bottom: 5px;
 
 .formGroup select,
 .formGroup input {
-width: 100%;
-padding: 8px;
-border: 1px solid rgba(255, 255, 255, 0.3);
-border-radius: 5px;
-background-color: rgba(255, 255, 255, 0.2);
-color: #ffffff;
+    width: 100%;
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    background-color: rgba(50, 50, 50, 0.8);
+    color: #ffffff;
+}
+
+option {
+    background-color: #333333;
+    color: #ffffff;
 }
 
 button {

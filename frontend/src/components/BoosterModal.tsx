@@ -1,6 +1,8 @@
 import React from 'react';
 import styles from '../css/BoosterModal.module.css';
 
+// Composant que pour l'affichage lors de l'ouverture d'un booster
+
 interface Card {
   cardNumber: number;
   cardName: string;

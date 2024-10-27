@@ -1,4 +1,3 @@
-// src/components/Marketplace.tsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { ethers } from 'ethers';
@@ -20,7 +19,7 @@ interface MarketplaceProps {
   userAddress: string;
   userNfts: any[];
   signer?: ethers.providers.JsonRpcSigner;
-  fetchNFTs: () => Promise<void>; // Nouvelle Prop pour rafraîchir les NFTs
+  fetchNFTs: () => Promise<void>;
 }
 
 const ERC721_ABI = [
@@ -29,7 +28,7 @@ const ERC721_ABI = [
   "function setApprovalForAll(address operator, bool _approved) external",
 ];
 
-const MARKETPLACE_ADDRESS = '0x715d5Fe8c17D243683FE836a0738bE5e2f9854A0';
+const MARKETPLACE_ADDRESS = '0x3B2268EbC246d3386Cfd831E864F66081561538C';
 
 // Fonction de validation pour vérifier si une chaîne est un nombre entier valide (Wei)
 const isValidWei = (value: string) => {
@@ -52,7 +51,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({ userAddress, userNfts, signer
         const listingsWithMetadata = await Promise.all(
           response.data.listings.map(async (listing: Listing) => {
             try {
-              // Remplacez cette URL par celle de votre API qui fournit les métadonnées
               console.log('[DEBUG] listing:', listing);
               console.log('1 [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] [DEBUG] ');
               const metadataResponse = await axios.get(`http://localhost:5000/hearthstone/metadata/${listing.nftAddress}/${listing.tokenId}`);

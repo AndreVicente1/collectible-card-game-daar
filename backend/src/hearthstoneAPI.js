@@ -63,8 +63,6 @@ const fetchSetMetadata = async (accessToken) => {
 
         // Stocker les sets dans MongoDB
         for (const set of sets) {
-            //if (!setsToInclude.includes(set.name)) continue;
-    
             // Vérifier si le set existe déjà
             const existingSet = await HearthstoneSet.findOne({ id: set.id });
     
@@ -122,7 +120,7 @@ const fetchAndSaveCardsForSet = async (setSlug, setName, accessToken) => {
                 // ignorer les héros
                 if (card.type === 'HERO') continue;
 
-                const cardType = mapCardTypeIdToType(card.cardTypeId) || 'UNKNOWN'; // Assurer que cardType est toujours défini
+                const cardType = mapCardTypeIdToType(card.cardTypeId) || 'UNKNOWN';
                 const cardRarity = mapRarityIdToRarity(card.rarityId) || 'UNKNOWN';
 
                 const attributes = [];

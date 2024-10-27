@@ -1,4 +1,3 @@
-// backend/models/Metadata.js
 const mongoose = require('mongoose');
 
 const MetadataSchema = new mongoose.Schema({

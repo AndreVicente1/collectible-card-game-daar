@@ -14,10 +14,7 @@ contract Main is Ownable {
 
     //boosters
     uint256 public boosterCount;
-    //uint256 public boosterPrice = 0.05 ether;
 
-    //event CollectionCreated(string name, uint256 cardCount, address collectionAddress);
-    //event CardMinted(address collectionAddress, address to, string cardName);
     event BoosterOpened(uint256 boosterId, address owner, uint256[] cardNumbers, string[] cardNames, string[] metadataURIS);
     event BoosterMinted(uint256 boosterId, string name, uint256 collectionId, address owner);
 
@@ -25,20 +22,15 @@ contract Main is Ownable {
         require(_owner != address(0), "Owner address cannot be zero");
     }
 
-    //function fallback() external {}
     
     // Create a new collection with a name and card count
     function createCollection(string memory _name, uint256 _cardCount, Collection.Card[] memory _cards) external onlyOwner {
-        // Deploy a new Collection contract for this collection
         require(_cardCount >= 0, "Card count must be greater or zero");
-        //console.log("Creating collection with name:", _name);
         Collection newCollection = new Collection(_name, _cardCount, _cards);
-        //console.log("Collection created, address:", address(newCollection));
         
         collections[collectionCount] = newCollection;
         collectionCount++;
 
-        //emit CollectionCreated(_name, _cardCount, address(newCollection));
     }
 
     function collectionExists(string memory _name) public view returns (bool) {
@@ -54,10 +46,8 @@ contract Main is Ownable {
     function mintCard(address _collectionAddress, address _to, uint256 _cardNumber, string memory _cardName, string memory _metadataURI) external onlyOwner {
         require(_collectionAddress != address(0), "Invalid collection address");
 
-        // Mint une carte depuis la collection sélectionnée
         Collection(_collectionAddress).mint(_to, _cardNumber, _cardName, _metadataURI);
 
-        //emit CardMinted(_collectionAddress, _to, _cardName);
     }
 
     // Get the number of collections created
@@ -85,7 +75,6 @@ contract Main is Ownable {
         address[] memory addresses = new address[](totalCollections);
         uint256[] memory cardCounts = new uint256[](totalCollections);
 
-        // Loop through collections and populate arrays
         for (uint256 i = 0; i < totalCollections; i++) {
             Collection collection = collections[i];
             names[i] = collection.collectionName();
@@ -124,11 +113,6 @@ contract Main is Ownable {
         boosterCount++;
         
         emit BoosterMinted(_boosterId, _name, _collectionId, msg.sender);
-    }
-
-    function _createRandomNum(uint256 _mod) internal view returns (uint256) {
-        uint256 randomNum = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
-        return randomNum % _mod;
     }
 
     function openBooster(uint256 _boosterId, address userAdd, uint256[] memory randomIndices) external {

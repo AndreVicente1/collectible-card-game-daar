@@ -7,7 +7,6 @@ interface AdminPageProps {
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ createCollection}) => {
-  // États pour créer une collection
   const [collectionName, setCollectionName] = useState('');
   const [cardCount, setCardCount] = useState<number>(0);
 

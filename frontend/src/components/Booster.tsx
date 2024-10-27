@@ -76,8 +76,8 @@ const Boosters: React.FC<BoosterProps> = ({wallet}) => {
             const boosterId = boosterMintedEvent.args.boosterId;
             console.log('Booster ID récup:', boosterId.toString());
 
-            // Envoyer une requête POST pour ouvrir le booster
-            const response = await axios.post(`http://localhost:5000/hearthstone/boosters/buyAndRedeem`, { boosterName, boosterId, collectionId, userAdd });
+            // POST request to open the booster
+            const response = await axios.post(`http://localhost:5000/hearthstone/boosters/open`, { boosterName, boosterId, collectionId, userAdd });
     
             console.log('Réponse de l\'achat du booster:', response.data);
             console.log('Cartes obtenues:', response.data.cards);

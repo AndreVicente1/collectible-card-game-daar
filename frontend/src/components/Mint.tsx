@@ -129,7 +129,7 @@ const Mint: React.FC = () => {
       <div className={styles.formGroup}>
         <label>Collection :</label>
         <select
-          value={selectedCollection ? selectedCollection.name : ''}
+          value={selectedCollection ? selectedCollection.name : ''} // sélectionner la collection
           onChange={(e) => {
             const collection = collections.find(c => c.name === e.target.value) || null;
             setSelectedCollection(collection);
@@ -144,6 +144,7 @@ const Mint: React.FC = () => {
         </select>
       </div>
 
+      {/* sélectionner une carte */}
       {selectedCollection && (
         <div className={styles.formGroup}>
           <label>Carte :</label>
@@ -171,11 +172,12 @@ const Mint: React.FC = () => {
           <input
             type="text"
             value={cardName}
-            readOnly // Empêche la modification manuelle
+            readOnly
           />
         </div>
       )}
 
+      {/* mettre une adresse */}
       {selectedCollection && selectedCard && (
         <div className={styles.formGroup}>
           <label>Adresse du Destinataire :</label>

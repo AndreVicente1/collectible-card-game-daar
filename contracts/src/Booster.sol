@@ -8,11 +8,12 @@ import "hardhat/console.sol";
 contract Booster is ERC721URIStorage, Ownable {
     string public boosterName;
     bool public isOpened;
-    uint256 public collectionId;
-
-    address public mainContract;
+    uint256 public collectionId; // collection id to which the booster belongs
     uint256 public boosterId;
 
+    address public mainContract;
+
+    // Event to be emitted when a booster is created (allows the server to listen to this event and use the data sent)
     event BoosterCreated(uint256 indexed boosterId, string boosterName, uint256 collectionId, address owner);
 
     constructor(string memory _name, uint256 _collectionId, uint256 _boosterId, address recip, address _mainContract) ERC721("Booster", "BST") Ownable(recip){

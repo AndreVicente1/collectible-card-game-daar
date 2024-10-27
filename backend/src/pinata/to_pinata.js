@@ -7,14 +7,19 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
-const HearthstoneCard = require('../models/HearthstoneCard');
-const uploadImageToPinata= require('./upload');
+const HearthstoneCard = require('./models/HearthstoneCard');
+const uploadImageToPinata= require('./pinata/upload');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
 const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error("L'URI MongoDB n'est pas défini dans le fichier .env");
+  process.exit(1)
+}
 
 // migration des images vers la db pinata
 const migrateImages = async () => {
